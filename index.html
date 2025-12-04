@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Read Only Data</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230066ff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<div id="json-output" style="display:none"></div>
+<h1>Data</h1>
+<div style="margin:8px 0">
+  <label>Name <input id="filter-name" type="text" placeholder="filter name"></label>
+  <label style="margin-left:12px">Country <input id="filter-country" type="text" placeholder="filter country"></label>
+  <button id="apply-filter">Apply</button>
+  <span id="status" style="margin-left:12px"></span>
+  </div>
+<table id="data-table" class="table-list table table-responsive table-striped" style="width:100%">
+  <thead>
+    <tr>
+      <th class="coll-id">id</th>
+      <th class="coll-0">profile</th>
+      <th class="coll-1 name">name</th>
+      <th class="coll-2">height</th>
+      <th class="coll-3">weight</th>
+      <th class="coll-date">date</th>
+      <th class="coll-4"><span class="info">info</span></th>
+      <th class="coll-5">country</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+  </table>
+<script async type="text/javascript" src="https://cdn.jsdelivr.net/npm/php-wasm/php-tags.jsdelivr.mjs"></script>
+<script id="db" src="db.html" type="text/html"></script>
+<script type="text/php" data-stdin="#db" data-stdout="#json-output">
+<?php
+error_reporting(E_ERROR | E_PARSE);
+libxml_use_internal_errors(true);
+$html = file_get_contents('php://stdin');
+$dom = new DOMDocument();
+$dom->loadHTML($html);
+$rows = $dom->getElementsByTagName('tr');
+$result = [];
+foreach ($rows as $row) {
+  $cells = $row->getElementsByTagName('td');
+  if ($cells->length === 0) { continue; }
+  $nameCell = $cells->item(0);
+  $anchors = $nameCell->getElementsByTagName('a');
+  $user_link = '';
+  $name = '';
+  for ($i = 0; $i < $anchors->length; $i++) {
+    $href = $anchors->item($i)->getAttribute('href');
+    $text = trim($anchors->item($i)->textContent);
+    if ($href && strpos($href, '/username/') !== false) {
+      $user_link = $href;
+      if ($text) { $name = $text; }
+    }
+  }
+  if ($name === '') { $name = trim($nameCell->textContent); }
+  $height = '';
+  $weight = '';
+  $date   = '';
+  $info   = '';
+  $country = '';
+  if ($cells->length > 1) { $height = trim($cells->item(1)->textContent); }
+  if ($cells->length > 2) { $weight = trim($cells->item(2)->textContent); }
+  if ($cells->length > 3) { $date   = trim($cells->item(3)->textContent); }
+  if ($cells->length > 4) { $info   = trim($cells->item(4)->textContent); }
+  if ($cells->length > 5) {
+    $countryCell = $cells->item(5);
+    $a = $countryCell->getElementsByTagName('a')->item(0);
+    $country = $a ? trim($a->textContent) : trim($countryCell->textContent);
+  }
+  $result[] = [
+    "user_link" => $user_link,
+    "name" => $name,
+    "height" => $height,
+    "weight" => $weight,
+    "date" => $date,
+    "info" => $info,
+    "country" => $country
+  ];
+}
+echo json_encode($result, JSON_PRETTY_PRINT);
+?>
+</script>
+<script>
+function getJson(){
+  const ls = localStorage.getItem('records');
+  if(ls){ try{ return JSON.parse(ls) } catch(_e){ return null } }
+  const out = document.getElementById('json-output').textContent || document.getElementById('json-output').innerText;
+  if(!out) return null;
+  try { return JSON.parse(out); } catch(_e){ return null; }
+}
+function renderFromJson(){
+  const data = getJson();
+  if(!data) return false;
+  const nameQ = document.getElementById('filter-name').value.trim().toLowerCase();
+  const countryQ = document.getElementById('filter-country').value.trim().toLowerCase();
+  const filtered = data.filter(r =>
+    (!nameQ || String(r.name||'').toLowerCase().includes(nameQ)) &&
+    (!countryQ || String(r.country||'').toLowerCase().includes(countryQ))
+  );
+  const tbody = document.querySelector('#data-table tbody');
+  tbody.innerHTML = '';
+  for(let i=0;i<filtered.length;i++){
+    const r = filtered[i];
+    const id = r.seq || (i+1);
+    const link = r.user_link ? `<a href="${r.user_link}">link</a>` : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${id}</td><td>${link}</td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${r.date||''}</td><td>${r.info||''}</td><td>${r.country||''}</td>`;
+    tbody.appendChild(tr);
+  }
+  document.getElementById('status').textContent = `${filtered.length} rows`;
+  return true;
+}
+document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); });
+function updateId1Name(){
+  const data = getJson();
+  if(!data || !data.length) return false;
+  const rec = data.find(r => (r.seq||0) === 1) || data[0];
+  const el = document.getElementById('id1-name');
+  if(el) el.textContent = rec && rec.name ? rec.name : '';
+  return true;
+}
+function updateDataTargets(){
+  const data = getJson();
+  if(!data || !data.length) return false;
+  const nodes = document.querySelectorAll('[data-id]');
+  nodes.forEach(el => {
+    const idAttr = el.getAttribute('data-id');
+    const idNum = Number(idAttr);
+    const rec = data.find(r => (Number(r.seq)||0) === idNum) || data[(idNum>0?idNum-1:0)] || data[0];
+    const ds = el.dataset;
+    let field = 'name';
+    if ('weight' in ds) field = 'weight';
+    else if ('name' in ds) field = 'name';
+    else if ('height' in ds) field = 'height';
+    else if ('date' in ds) field = 'date';
+    else if ('info' in ds) field = 'info';
+    else if ('country' in ds) field = 'country';
+    el.textContent = rec && rec[field] ? rec[field] : '';
+  });
+  return true;
+}
+document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Name(); updateDataTargets(); });
+const iv = setInterval(()=>{ const a = renderFromJson(); const b = updateId1Name(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 100);
+</script>
+<div data-id="1" data-name style="margin-top:8px">display name here</div>
+<div data-id="1" data-weight style="margin-top:8px">display weight here</div>
+</body>
+</html>
