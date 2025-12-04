@@ -27,29 +27,53 @@
 <script>
 async function initClerkAdmin(){
   try{
+    // Check if config.js loaded
     if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
-      document.getElementById('status').textContent = 'Auth not configured';
+      document.getElementById('status').textContent = '❌ Auth not configured';
       return;
     }
+
+    // Load Clerk
     await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
     const clerk = Clerk;
+
+    // Wait for user session
     const user = await (clerk.user?.get?.() || clerk.user);
-    if(!user){ window.location.href='login.html'; return; }
-    // Allow only configured admin user to access admin functions
+
+    // Not signed in → redirect to login
+    if(!user){ 
+      window.location.href='login.html'; 
+      return; 
+    }
+
+    // Check if user is admin
     const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
     const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
     const uid = user.id || user.userId || user.sub || '';
     const uname = user.username || user.publicMetadata?.username || user.email || '';
+
     if(String(uid) !== String(allowedId) || String(uname) !== String(allowedName)){
       // Not an admin — redirect to public index
       window.location.href = 'index.html';
       return;
     }
-    document.getElementById('auth-status').textContent = 'Signed in as: ' + (user.username || '');
+
+    // Admin user confirmed
+    document.getElementById('auth-status').textContent = '✅ Signed in as: ' + (user.username || user.email || '');
     document.getElementById('logout').style.display = '';
-    document.getElementById('logout').addEventListener('click', async ()=>{ try{ await clerk.signOut?.(); }catch(_e){} window.location.href='login.html'; });
-  }catch(_e){ window.location.href='login.html'; return; }
+    document.getElementById('logout').addEventListener('click', async ()=>{ 
+      try{ 
+        await clerk.signOut?.(); 
+      }catch(_e){} 
+      window.location.href='login.html'; 
+    });
+  }catch(_e){ 
+    document.getElementById('status').textContent = '❌ Auth error'; 
+    window.location.href='login.html'; 
+  }
 }
+
+// Initialize auth guard immediately
 initClerkAdmin();
 const KEY='records';
 async function cloudLoad(){try{const resp=await fetch('records.json',{cache:'no-cache'});if(resp.ok){return await resp.json()}}catch(_e){}return null}

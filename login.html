@@ -21,39 +21,70 @@
 <script>
 async function initClerkLogin(){
   try{
+    // Check if config.js loaded
     if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
-      document.getElementById('status').textContent = 'Clerk not configured';
+      document.getElementById('status').textContent = '❌ Clerk not configured (config.js missing)';
       return;
     }
+
+    // Load Clerk SDK
     await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
     const clerk = Clerk;
+
+    // Async function to update UI based on session
     async function updateUI(){
       try{
         const user = await (clerk.user?.get?.() || clerk.user);
         if(user){
-          document.getElementById('status').textContent = 'Signed in as: ' + (user.username || user.email || '');
+          document.getElementById('status').textContent = '✅ Signed in as: ' + (user.username || user.email || 'User');
           document.getElementById('sign-in').style.display='none';
           document.getElementById('sign-out').style.display='';
+          // Redirect admin to admin.html
           window.location.href='admin.html';
         } else {
           document.getElementById('status').textContent = 'Not signed in';
           document.getElementById('sign-in').style.display='';
           document.getElementById('sign-out').style.display='none';
         }
-      }catch(_e){ document.getElementById('status').textContent='Not signed in'; }
+      }catch(_e){ 
+        document.getElementById('status').textContent='⚠️ Could not load user session';
+      }
     }
-    document.getElementById('sign-in').addEventListener('click', ()=>{
-      clerk.openSignIn && clerk.openSignIn({ redirectUrl: window.location.origin + '/admin.html' });
-      if(!clerk.openSignIn){ window.location.href = 'https://clerk.com/sign-in?redirect_url=' + encodeURIComponent(window.location.origin + '/admin.html'); }
+
+    // Sign-in button handler
+    document.getElementById('sign-in').addEventListener('click', async ()=>{
+      try {
+        // Try Clerk's sign-in modal
+        if(clerk.openSignIn){
+          clerk.openSignIn({ redirectUrl: window.location.origin + '/admin.html' });
+        } else {
+          // Fallback: redirect to Clerk hosted sign-in
+          window.location.href = 'https://clerk.com/sign-in?redirect_url=' + encodeURIComponent(window.location.origin + '/admin.html');
+        }
+      } catch(_e) {
+        alert('Sign-in failed. Please check your Clerk configuration.');
+      }
     });
+
+    // Sign-out button handler
     document.getElementById('sign-out').addEventListener('click', async ()=>{
-      try{ await clerk.signOut?.(); }catch(_e){}
-      updateUI();
+      try{ 
+        await clerk.signOut?.(); 
+        window.location.reload();
+      }catch(_e){ 
+        alert('Sign-out failed');
+      }
     });
+
+    // Update UI on page load
     updateUI();
-  }catch(e){ document.getElementById('status').textContent = 'Auth init error'; }
+  }catch(e){ 
+    document.getElementById('status').textContent = '❌ Auth initialization error'; 
+    console.error('Clerk init error:', e);
+  }
 }
+
+// Initialize on page load
 initClerkLogin();
-</script>
 </body>
 </html>

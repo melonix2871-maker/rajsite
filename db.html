@@ -1,14 +1,30 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Data Source</title>
+<title>Data Table</title>
+<style>
+  body { font-family: sans-serif; padding: 16px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background: #f0f0f0; }
+  button { padding: 4px 8px; margin-right: 4px; cursor: pointer; }
+  #auth-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  #row-form { border: 1px solid #ddd; padding: 12px; margin: 16px 0; }
+  #row-form label { display: block; margin: 8px 0; }
+  #row-form input { padding: 4px; width: 200px; }
+  #row-form button { padding: 6px 12px; }
+</style>
 </head>
 <body>
-<div>details here storage db limit</div>
-<table class="table-list table table-responsive table-striped">
+<div id="auth-bar">
+  <span id="auth-status">Loading auth...</span>
+  <button id="logout" style="display:none">Logout</button>
+</div>
+
+<h1>Data Table</h1>
+<table>
   <thead>
     <tr>
       <th>id</th>
@@ -19,13 +35,14 @@
       <th>metavalue</th>
       <th>datecreated</th>
       <th>dateupdated</th>
-      <th>actions</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody></tbody>
 </table>
+
 <hr>
-<h1>Add / Edit Row</h1>
+<h1>Add / Edit Record</h1>
 <form id="row-form">
   <input type="hidden" id="id">
   <label>relid <input type="number" id="relid" required></label>
@@ -33,48 +50,115 @@
   <label>collection <input type="text" id="collection" required></label>
   <label>metakey <input type="text" id="metakey" required></label>
   <label>metavalue <input type="text" id="metavalue"></label>
-  <button type="submit">Create</button>
+  <button type="submit" id="submit-btn">Create</button>
   <button type="button" id="update-btn" style="display:none">Update</button>
   <button type="button" id="cancel-btn" style="display:none">Cancel</button>
 </form>
-<div id="auth-bar" style="display:flex;gap:12px;align-items:center;margin-top:8px">
-  <span id="auth-status"></span>
-  <button id="logout" style="display:none">Logout</button>
-  <button id="export-json">Export JSON</button>
-  <button id="copy-json">Copy JSON</button>
+
+<hr>
+<h2>Import / Export</h2>
+<div>
+  <button id="export-json">📥 Export JSON</button>
+  <button id="copy-json">📋 Copy JSON to Clipboard</button>
   <input type="file" id="import-json" accept="application/json">
+  <p style="color: #666; font-size: 12px;">To persist to Gist: Copy JSON, then go to GitHub Actions → "Update Gist" → Run workflow → Paste JSON.</p>
 </div>
 
 <script src="/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
 <script>
 const KEY = 'records';
-function saveLocal(records){ localStorage.setItem(KEY, JSON.stringify(records)); }
-function loadLocal(){ const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; }
-async function cloudLoad(){ try{ const r = await fetch('records.json', { cache: 'no-cache' }); if(r.ok) return await r.json(); }catch(_e){} return null; }
-async function cloudSave(records){ console.warn('cloudSave: client-side persistence disabled. Use Actions Update Gist to persist changes.'); return false; }
-function render(records){ const tb = document.querySelector('tbody'); tb.innerHTML = ''; for(const r of records){ const tr = document.createElement('tr'); tr.innerHTML = `<td>${r.id||''}</td><td>${r.relid||''}</td><td>${r.prefix||''}</td><td>${r.collection||''}</td><td>${r.metakey||''}</td><td>${r.metavalue||''}</td><td>${r.datecreated||''}</td><td>${r.dateupdated||''}</td><td><button data-action="edit" data-id="${r.id}">Edit</button> <button data-action="delete" data-id="${r.id}">Delete</button></td>`; tb.appendChild(tr); } }
 
-async function ensure(){ const cloud = await cloudLoad(); if(cloud){ saveLocal(cloud); render(cloud); } else { const cur = loadLocal(); if(cur){ render(cur); } else { render([]); } } }
+// Storage helpers
+function saveLocal(records) { localStorage.setItem(KEY, JSON.stringify(records)); }
+function loadLocal() { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; }
 
-async function initClerkGuard(){ try{
-  if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){ document.getElementById('auth-status').textContent = 'Auth not configured'; return; }
-  await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
-  const clerk = Clerk;
-  const user = await (clerk.user?.get?.() || clerk.user);
-  if(!user){ window.location.href = 'login.html'; return; }
-  const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
-  const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
-  const uid = user.id || user.userId || user.sub || '';
-  const uname = user.username || user.publicMetadata?.username || user.email || '';
-  if(String(uid) !== String(allowedId) || String(uname) !== String(allowedName)){
-    window.location.href = 'index.html'; return;
+// Load from Gist at build time
+async function cloudLoad() {
+  try {
+    const r = await fetch('records.json', { cache: 'no-cache' });
+    if (r.ok) return await r.json();
+  } catch (_e) { }
+  return null;
+}
+
+// Rendering
+function render(records) {
+  const tb = document.querySelector('tbody');
+  tb.innerHTML = '';
+  for (const r of records) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.id || ''}</td><td>${r.relid || ''}</td><td>${r.prefix || ''}</td><td>${r.collection || ''}</td><td>${r.metakey || ''}</td><td>${r.metavalue || ''}</td><td>${r.datecreated || ''}</td><td>${r.dateupdated || ''}</td><td><button data-action="edit" data-id="${r.id}">Edit</button> <button data-action="delete" data-id="${r.id}">Delete</button></td>`;
+    tb.appendChild(tr);
   }
-  document.getElementById('auth-status').textContent = 'Signed in as: ' + (user.username || '');
-  document.getElementById('logout').style.display = '';
-  document.getElementById('logout').addEventListener('click', async ()=>{ try{ await clerk.signOut?.(); }catch(_e){} window.location.href = 'login.html'; });
-}catch(_e){ window.location.href = 'login.html'; return; } }
+}
 
+// Load and render initial data
+async function ensure() {
+  const cloud = await cloudLoad();
+  if (cloud) {
+    saveLocal(cloud);
+    render(cloud);
+  } else {
+    const cur = loadLocal();
+    if (cur) {
+      render(cur);
+    } else {
+      render([]);
+    }
+  }
+}
+
+// Clerk Auth Guard
+async function initClerkGuard() {
+  try {
+    // Check if config.js loaded
+    if (!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY) {
+      document.getElementById('auth-status').textContent = '❌ Auth not configured';
+      return;
+    }
+
+    // Load Clerk
+    await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
+
+    const clerk = Clerk;
+    const user = await (clerk.user?.get?.() || clerk.user);
+
+    // Not signed in → redirect to login
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // Check if user is admin
+    const allowedId = window.__CONFIG.ADMIN_USER_ID;
+    const allowedName = window.__CONFIG.ADMIN_USERNAME;
+    const uid = user.id || user.userId || user.sub || '';
+    const uname = user.username || user.publicMetadata?.username || user.email || '';
+
+    if (String(uid) !== String(allowedId) || String(uname) !== String(allowedName)) {
+      // Not an admin → redirect to public index
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Admin user confirmed
+    document.getElementById('auth-status').textContent = '✅ Signed in as: ' + (user.username || user.email || '');
+    document.getElementById('logout').style.display = '';
+    document.getElementById('logout').addEventListener('click', async () => {
+      try {
+        await clerk.signOut?.();
+      } catch (_e) { }
+      window.location.href = 'login.html';
+    });
+
+  } catch (_e) {
+    document.getElementById('auth-status').textContent = '❌ Auth error';
+    window.location.href = 'login.html';
+  }
+}
+
+// Initialize
 initClerkGuard();
 
 // Create
@@ -85,141 +169,143 @@ document.getElementById('row-form').addEventListener('submit', async (e) => {
   const collection = document.getElementById('collection').value.trim();
   const metakey = document.getElementById('metakey').value.trim();
   const metavalue = document.getElementById('metavalue').value.trim();
-  if(!Number.isFinite(relid) || !prefix || !collection || !metakey) return;
-  let records = await cloudLoad(); if(!records) records = loadLocal() || [];
+
+  if (!Number.isFinite(relid) || !prefix || !collection || !metakey) return;
+
+  let records = await cloudLoad();
+  if (!records) records = loadLocal() || [];
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const rec = { id, relid, prefix, collection, metakey, metavalue, datecreated: now, dateupdated: now };
   records.push(rec);
+
   saveLocal(records);
-  await cloudSave(records);
   render(records);
   e.target.reset();
 });
 
 // Edit / Delete handlers
 document.querySelector('tbody').addEventListener('click', async (e) => {
-  const t = e.target; if(!(t instanceof Element)) return; const a = t.getAttribute('data-action'); if(!a) return; const id = t.getAttribute('data-id');
-  let records = await cloudLoad(); if(!records) records = loadLocal() || [];
-  if(a === 'delete'){ records = records.filter(x => x.id !== id); saveLocal(records); await cloudSave(records); render(records); return; }
-  if(a === 'edit'){ const r = records.find(x => x.id === id); if(!r) return; document.getElementById('id').value = r.id; document.getElementById('relid').value = r.relid || ''; document.getElementById('prefix').value = r.prefix || ''; document.getElementById('collection').value = r.collection || ''; document.getElementById('metakey').value = r.metakey || ''; document.getElementById('metavalue').value = r.metavalue || ''; document.querySelector('#row-form button[type="submit"]').style.display = 'none'; document.getElementById('update-btn').style.display = ''; document.getElementById('cancel-btn').style.display = ''; }
+  const t = e.target;
+  if (!(t instanceof Element)) return;
+  const a = t.getAttribute('data-action');
+  if (!a) return;
+  const id = t.getAttribute('data-id');
+
+  let records = await cloudLoad();
+  if (!records) records = loadLocal() || [];
+
+  if (a === 'delete') {
+    records = records.filter(x => x.id !== id);
+    saveLocal(records);
+    render(records);
+    return;
+  }
+
+  if (a === 'edit') {
+    const r = records.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('id').value = r.id;
+    document.getElementById('relid').value = r.relid || '';
+    document.getElementById('prefix').value = r.prefix || '';
+    document.getElementById('collection').value = r.collection || '';
+    document.getElementById('metakey').value = r.metakey || '';
+    document.getElementById('metavalue').value = r.metavalue || '';
+    document.getElementById('submit-btn').style.display = 'none';
+    document.getElementById('update-btn').style.display = '';
+    document.getElementById('cancel-btn').style.display = '';
+  }
 });
 
 // Update
 document.getElementById('update-btn').addEventListener('click', async () => {
-  const id = document.getElementById('id').value; let records = await cloudLoad(); if(!records) records = loadLocal() || [];
-  const idx = records.findIndex(x => x.id === id); if(idx !== -1){ const now = new Date().toISOString(); records[idx].relid = Number(document.getElementById('relid').value.trim()); records[idx].prefix = document.getElementById('prefix').value.trim(); records[idx].collection = document.getElementById('collection').value.trim(); records[idx].metakey = document.getElementById('metakey').value.trim(); records[idx].metavalue = document.getElementById('metavalue').value.trim(); records[idx].dateupdated = now; saveLocal(records); await cloudSave(records); render(records); // clear
-    document.getElementById('id').value = ''; document.getElementById('relid').value = ''; document.getElementById('prefix').value = ''; document.getElementById('collection').value = ''; document.getElementById('metakey').value = ''; document.getElementById('metavalue').value = ''; document.querySelector('#row-form button[type="submit"]').style.display = ''; document.getElementById('update-btn').style.display = 'none'; document.getElementById('cancel-btn').style.display = 'none'; }
+  const id = document.getElementById('id').value;
+  let records = await cloudLoad();
+  if (!records) records = loadLocal() || [];
+
+  const idx = records.findIndex(x => x.id === id);
+  if (idx !== -1) {
+    const now = new Date().toISOString();
+    records[idx].relid = Number(document.getElementById('relid').value.trim());
+    records[idx].prefix = document.getElementById('prefix').value.trim();
+    records[idx].collection = document.getElementById('collection').value.trim();
+    records[idx].metakey = document.getElementById('metakey').value.trim();
+    records[idx].metavalue = document.getElementById('metavalue').value.trim();
+    records[idx].dateupdated = now;
+
+    saveLocal(records);
+    render(records);
+
+    // Clear form
+    document.getElementById('id').value = '';
+    document.getElementById('relid').value = '';
+    document.getElementById('prefix').value = '';
+    document.getElementById('collection').value = '';
+    document.getElementById('metakey').value = '';
+    document.getElementById('metavalue').value = '';
+    document.getElementById('submit-btn').style.display = '';
+    document.getElementById('update-btn').style.display = 'none';
+    document.getElementById('cancel-btn').style.display = 'none';
+  }
 });
 
 // Cancel
-document.getElementById('cancel-btn').addEventListener('click', ()=>{
-  document.getElementById('id').value = ''; document.getElementById('relid').value = ''; document.getElementById('prefix').value = ''; document.getElementById('collection').value = ''; document.getElementById('metakey').value = ''; document.getElementById('metavalue').value = ''; document.querySelector('#row-form button[type="submit"]').style.display = ''; document.getElementById('update-btn').style.display = 'none'; document.getElementById('cancel-btn').style.display = 'none';
+document.getElementById('cancel-btn').addEventListener('click', () => {
+  document.getElementById('id').value = '';
+  document.getElementById('relid').value = '';
+  document.getElementById('prefix').value = '';
+  document.getElementById('collection').value = '';
+  document.getElementById('metakey').value = '';
+  document.getElementById('metavalue').value = '';
+  document.getElementById('submit-btn').style.display = '';
+  document.getElementById('update-btn').style.display = 'none';
+  document.getElementById('cancel-btn').style.display = 'none';
 });
 
-// Export / Import / Copy
-document.getElementById('export-json').addEventListener('click', ()=>{ const data = JSON.stringify(loadLocal()||[], null, 2); const blob = new Blob([data], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'records.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href); });
+// Export
+document.getElementById('export-json').addEventListener('click', () => {
+  const data = JSON.stringify(loadLocal() || [], null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'records.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+});
 
-document.getElementById('import-json').addEventListener('change', (e)=>{ const f = e.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = ()=>{ try{ const list = JSON.parse(String(reader.result)); if(Array.isArray(list)){ saveLocal(list); render(list); } }catch(_e){} e.target.value = ''; }; reader.readAsText(f); });
+// Import
+document.getElementById('import-json').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const list = JSON.parse(String(reader.result));
+      if (Array.isArray(list)) {
+        saveLocal(list);
+        render(list);
+      }
+    } catch (_e) { }
+    e.target.value = '';
+  };
+  reader.readAsText(f);
+});
 
-document.getElementById('copy-json').addEventListener('click', ()=>{ const data = JSON.stringify(loadLocal()||[], null, 2); navigator.clipboard.writeText(data).then(()=>{ alert('JSON copied to clipboard. Now open Actions > Update Gist and paste into the records_json input.'); }).catch(()=>{ alert('Copy failed — use Export JSON instead.'); }); });
+// Copy to clipboard
+document.getElementById('copy-json').addEventListener('click', () => {
+  const data = JSON.stringify(loadLocal() || [], null, 2);
+  navigator.clipboard.writeText(data).then(() => {
+    alert('✅ JSON copied to clipboard!');
+  }).catch(() => {
+    alert('❌ Copy failed — use Export JSON instead.');
+  });
+});
 
-// Initialize
+// Load initial data
 ensure();
-</script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Data Source</title>
-</head>
-<body>
- <div>details here storage db limit</div> 
-<table class="table-list table table-responsive table-striped">
-<thead>
-<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
-<script>
-const KEY='records';
-function parseTbody(){const rows=[...document.querySelectorAll('tbody tr')];const out=[];for(const row of rows){const tds=row.querySelectorAll('td');if(tds.length<7) continue;const nameCell=tds[1];const a=nameCell.querySelector('a[href*="/username/"]');const user_link=a?a.getAttribute('href'):'';const name=(a&&a.textContent)||nameCell.textContent.trim();const height=tds[2].textContent.trim();const weight=tds[3].textContent.trim();const date=tds[4].textContent.trim();const info=tds[5].textContent.trim();const cc=tds[6];const ca=cc.querySelector('a');const country=ca?ca.textContent.trim():cc.textContent.trim();out.push({id:crypto.randomUUID(),user_link,name,height,weight,date,info,country})}return out}
-function assignSeq(records){return records.map((r,i)=>({...r,seq:i+1}))}
-function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
-function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}
-async function cloudLoad(){try{const resp=await fetch('records.json',{cache:'no-cache'});if(resp.ok){return await resp.json()}}catch(_e){}return null}
-async function cloudSave(records){try{console.warn('cloudSave: server-side gist update not implemented in client; records saved to localStorage only.');}catch(_e){}
-}
-function render(records){const tb=document.querySelector('tbody');tb.innerHTML='';for(const r of records){const userHref=r.user_link||`/username/${encodeURIComponent(r.name)}/`;const countryHref=`/country/${encodeURIComponent(r.country)}/`;const tr=document.createElement('tr');tr.innerHTML=`<td class="coll-0">${r.seq||''}</td><td class="coll-1 name"><a href="${userHref}" class="icon"><i class="flaticon-user"></i></a><a href="${userHref}">${r.name}</a></td><td class="coll-2 height">${r.height}</td><td class="coll-3 weight">${r.weight}</td><td class="coll-date">${r.date}</td><td class="coll-4 size mob-info">${r.info||''}</td><td class="coll-5 country"><a href="${countryHref}">${r.country}</a></td><td class="coll-6"><button data-action="edit" data-id="${r.id}">Edit</button><button data-action="delete" data-id="${r.id}">Delete</button></td>`;tb.appendChild(tr)}
-}
-async function ensure(){const cloud=await cloudLoad();if(cloud){const seqd=assignSeq(cloud);save(seqd);render(seqd)}else{const cur=load();if(cur){const seqd=assignSeq(cur);save(seqd);render(seqd)}else{const seed=parseTbody();const seqd=assignSeq(seed);save(seqd);render(seqd)}}}
-async function initClerkGuard(){try{if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){document.getElementById('auth-status').textContent='Auth not configured';return}await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });const clerk=Clerk;const user = await (clerk.user?.get?.() || clerk.user);if(!user){window.location.href='login.html';return}else{document.getElementById('auth-status').textContent='Signed in as: '+(user.username||'');document.getElementById('logout').style.display='';}}catch(_e){window.location.href='login.html';return}}
-document.getElementById('logout').addEventListener('click',async()=>{try{await Clerk.signOut?.();}catch(_e){}window.location.href='login.html';});
-initClerkGuard();
-      <a href="/username/Jhon Doe/" class="icon"><i class="flaticon-user"></i></a>
-      <a href="/username/Jhon Doe/">Jhon Doe</a>
-    </td>
-    <td class="coll-2 height">45</td>
-    <td class="coll-3 weight">50</td>
-    <td class="coll-date">9am May. 16th</td>
-    <td class="coll-4 size mob-info">abcd</td>
-    <td class="coll-5 country"><a href="/country/CA/">CA</a></td>
-  </tr>
-  <tr>
-    <td class="coll-0">2</td>
-    <td class="coll-1 name">
-      <a href="/username/Kasim Shk/" class="icon"><i class="flaticon-user"></i></a>
-      <a href="/username/Kasim Shk/">Kasim Shk</a>
-    </td>
-    <td class="coll-2 height">33</td>
-    <td class="coll-3 weight">54</td>
-    <td class="coll-date">Mar. 14th '18</td>
-    <td class="coll-4 size mob-info">ijkl</td>
-    <td class="coll-5 country"><a href="/country/UAE/">UAE</a></td>
-  </tr>
-</tbody>
-</table>
-<hr>
-<h1>Add Row</h1>
-<form id="row-form">
-  <input type="hidden" id="id">
-  <label>Name <input type="text" id="name" required></label>
-  <label>Height <input type="number" id="height" required></label>
-  <label>Weight <input type="number" id="weight" required></label>
-  <label>Date <input type="text" id="date" required></label>
-  <label>Info <input type="text" id="info"></label>
-  <label>Country <input type="text" id="country" required></label>
-  <button type="submit">Create</button>
-  <button type="button" id="update-btn" style="display:none">Update</button>
-  <button type="button" id="cancel-btn" style="display:none">Cancel</button>
-</form>
-<div id="auth-bar" style="display:flex;gap:12px;align-items:center;margin-top:8px">
-  <span id="auth-status"></span>
-  <button id="logout" style="display:none">Logout</button>
-  <button id="export-json">Export JSON</button>
-  <input type="file" id="import-json" accept="application/json">
-  </div>
-<script src="https://js.puter.com/v2/"></script>
-<script>
-const KEY='records';
-function parseTbody(){const rows=[...document.querySelectorAll('tbody tr')];const out=[];for(const row of rows){const tds=row.querySelectorAll('td');if(tds.length<7) continue;const nameCell=tds[1];const a=nameCell.querySelector('a[href*="/username/"]');const user_link=a?a.getAttribute('href'):'';const name=(a&&a.textContent)||nameCell.textContent.trim();const height=tds[2].textContent.trim();const weight=tds[3].textContent.trim();const date=tds[4].textContent.trim();const info=tds[5].textContent.trim();const cc=tds[6];const ca=cc.querySelector('a');const country=ca?ca.textContent.trim():cc.textContent.trim();out.push({id:crypto.randomUUID(),user_link,name,height,weight,date,info,country})}return out}
-function assignSeq(records){return records.map((r,i)=>({...r,seq:i+1}))}
-function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
-function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}
-async function cloudLoad(){try{const b=await puter.fs.read('records.json');const t=await b.text();const j=JSON.parse(t);if(Array.isArray(j))return j}catch(_e){}return null}
-async function cloudSave(records){try{await puter.fs.write('records.json',new Blob([JSON.stringify(records)],{type:'application/json'}))}catch(_e){}}
-function render(records){const tb=document.querySelector('tbody');tb.innerHTML='';for(const r of records){const userHref=r.user_link||`/username/${encodeURIComponent(r.name)}/`;const countryHref=`/country/${encodeURIComponent(r.country)}/`;const tr=document.createElement('tr');tr.innerHTML=`<td class="coll-0">${r.seq||''}</td><td class="coll-1 name"><a href="${userHref}" class="icon"><i class="flaticon-user"></i></a><a href="${userHref}">${r.name}</a></td><td class="coll-2 height">${r.height}</td><td class="coll-3 weight">${r.weight}</td><td class="coll-date">${r.date}</td><td class="coll-4 size mob-info">${r.info||''}</td><td class="coll-5 country"><a href="${countryHref}">${r.country}</a></td><td class="coll-6"><button data-action="edit" data-id="${r.id}">Edit</button><button data-action="delete" data-id="${r.id}">Delete</button></td>`;tb.appendChild(tr)}}
-async function ensure(){const cloud=await cloudLoad();if(cloud){const seqd=assignSeq(cloud);save(seqd);render(seqd)}else{const cur=load();if(cur){const seqd=assignSeq(cur);save(seqd);render(seqd)}else{const seed=parseTbody();const seqd=assignSeq(seed);save(seqd);render(seqd)}}}
-async function guard(){try{if(!puter.auth.isSignedIn()){window.location.href='login.html';return;}const u=await puter.auth.getUser();document.getElementById('auth-status').textContent='Signed in as: '+(u&&u.username||'');document.getElementById('logout').style.display='';}catch(_e){window.location.href='login.html';return;}}
-document.getElementById('logout').addEventListener('click',async()=>{try{await puter.auth.signOut();}catch(_e){}window.location.href='login.html';});
-guard();
-document.getElementById('row-form').addEventListener('submit',async e=>{e.preventDefault();const name=document.getElementById('name').value.trim();const height=document.getElementById('height').value.trim();const weight=document.getElementById('weight').value.trim();const date=document.getElementById('date').value.trim();const info=document.getElementById('info').value.trim();const country=document.getElementById('country').value.trim();if(!name||!height||!weight||!date||!country) return;let records=await cloudLoad();if(!records)records=load()||parseTbody();const id=crypto.randomUUID();records.push({id,seq:records.length+1,user_link:`/username/${encodeURIComponent(name)}/`,name,height,weight,date,info,country});save(records);await cloudSave(records);render(records);e.target.reset()})
-document.querySelector('tbody').addEventListener('click',async e=>{const t=e.target;if(!(t instanceof Element)) return;const a=t.getAttribute('data-action');if(!a) return;const id=t.getAttribute('data-id');let records=await cloudLoad();if(!records)records=load()||parseTbody();if(a==='delete'){records=records.filter(x=>x.id!==id);records=assignSeq(records);save(records);await cloudSave(records);render(records)}else if(a==='edit'){const r=records.find(x=>x.id===id);if(!r) return;document.getElementById('id').value=r.id;document.getElementById('name').value=r.name;document.getElementById('height').value=r.height;document.getElementById('weight').value=r.weight;document.getElementById('date').value=r.date;document.getElementById('info').value=r.info||'';document.getElementById('country').value=r.country;document.querySelector('#row-form button[type="submit"]').style.display='none';document.getElementById('update-btn').style.display='';document.getElementById('cancel-btn').style.display=''}})
-document.getElementById('update-btn').addEventListener('click',async()=>{const id=document.getElementById('id').value;let records=await cloudLoad();if(!records)records=load()||parseTbody();const idx=records.findIndex(x=>x.id===id);if(idx!==-1){const seq=records[idx].seq;records[idx]={id,seq,user_link:`/username/${encodeURIComponent(document.getElementById('name').value.trim())}/`,name:document.getElementById('name').value.trim(),height:document.getElementById('height').value.trim(),weight:document.getElementById('weight').value.trim(),date:document.getElementById('date').value.trim(),info:document.getElementById('info').value.trim(),country:document.getElementById('country').value.trim()};save(records);await cloudSave(records);render(records);clearForm()}})
-ensure()
-window.addEventListener('storage',e=>{if(e.key===KEY){const cur=load();const seqd=assignSeq(cur||parseTbody());save(seqd);render(seqd)}})
-document.getElementById('export-json').addEventListener('click',()=>{const data=JSON.stringify(load()||parseTbody(),null,2);const blob=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='records.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href)})
-document.getElementById('import-json').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{try{const list=JSON.parse(String(reader.result));if(Array.isArray(list)){const seqd=assignSeq(list);save(seqd);render(seqd)}}catch(_e){}e.target.value=''};reader.readAsText(f)})
 </script>
 </body>
 </html>
