@@ -11,11 +11,6 @@
   <span id="auth-status"></span>
   <button id="logout" style="display:none">Logout</button>
 </div>
-<div id="gist-token" style="margin-top:8px;display:none">
-  <label>GitHub PAT (gist scope): <input type="password" id="gist-pat" placeholder="Paste PAT here"></label>
-  <button id="set-pat">Set Token</button>
-  <span id="token-status" style="margin-left:8px;color:#070"></span>
-</div>
 <h1>Add Record</h1>
 <form id="row-form">
   <label>relid <input type="number" id="relid" required></label>
@@ -31,10 +26,9 @@
   <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
 </div>
 <div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
-<div style="margin-top:8px;color: #a00">To persist changes to the Gist: export or copy JSON below then run the "Update Gist" workflow in GitHub Actions and paste the JSON into the `records_json` input.</div>
+<div style="margin-top:8px;color:#333">CoreEngineDB-backed admin. Changes are persisted to the remote JSON.</div>
 <script src="config.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<!-- CoreEngineDB runtime config is provided by config.js -->
 <script>
 // Diagnostic: check config.js is served and show status
 async function checkConfigJs(){
@@ -56,116 +50,14 @@ async function checkConfigJs(){
   }
 }
 checkConfigJs();
-async function initFirebaseAdmin(){
-  try{
-    // Check if config.js loaded
-    if(!window.__CONFIG || !window.__CONFIG.firebase){
-      document.getElementById('status').textContent = '❌ Auth not configured';
-      return;
-    }
-
-    // Initialize Firebase
-    const firebaseConfig = window.__CONFIG.firebase;
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
-    // Wait for auth state
-    const user = await new Promise(resolve => {
-      const unsubscribe = auth.onAuthStateChanged(user => {
-        unsubscribe();
-        resolve(user);
-      });
-    });
-
-    // Not signed in → redirect to login
-    if(!user){ 
-      window.location.href='login.html'; 
-      return; 
-    }
-
-    // Check if user is admin
-    const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
-    const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
-    const uid = user.uid || '';
-    const uname = user.displayName || user.email || '';
-
-    if(String(uid) !== String(allowedId) && String(uname) !== String(allowedName)){
-      // Not an admin — redirect to public index
-      window.location.href = 'index.html';
-      return;
-    }
-
-    // Admin user confirmed
-    document.getElementById('auth-status').textContent = '✅ Signed in as: ' + (user.displayName || user.email || '');
-    document.getElementById('logout').style.display = '';
-    document.getElementById('logout').addEventListener('click', async ()=>{ 
-      try{ 
-        await auth.signOut(); 
-      }catch(_e){} 
-      window.location.href='login.html'; 
-    });
-    // Show PAT input for admin to allow saving to gist
-    document.getElementById('gist-token').style.display = '';
-    document.getElementById('set-pat').addEventListener('click', ()=> setGistTokenFromInput());
-  }catch(_e){ 
-    document.getElementById('status').textContent = '❌ Auth error'; 
-    console.error('Firebase admin init error:', _e);
-    window.location.href='login.html'; 
-  }
-}
-
-// Initialize auth guard immediately
-initFirebaseAdmin();
-
-// In-memory PAT for Gist writes (never persisted)
-let gistToken = null;
-
-function setGistTokenFromInput(){
-  const v = document.getElementById('gist-pat').value.trim();
-  gistToken = v || null;
-  document.getElementById('token-status').textContent = gistToken ? 'Token set' : '';
-}
-
-async function cloudLoad(token){
-  try{
-    const gid = window.__CONFIG && window.__CONFIG.GIST_ID;
-    const fname = (window.__CONFIG && window.__CONFIG.GIST_FILENAME) || 'records.json';
-    if(!gid) return null;
-    const headers = token ? { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' } : { 'Accept': 'application/vnd.github.v3+json' };
-    const resp = await fetch(`https://api.github.com/gists/${gid}`, { headers });
-    if(!resp.ok) return null;
-    const data = await resp.json();
-    const content = data && data.files && data.files[fname] && data.files[fname].content;
-    if(!content) return [];
-    return JSON.parse(content);
-  }catch(e){ console.error('cloudLoad error', e); return null; }
-}
-
-async function cloudSave(records, token){
-  try{
-    const gid = window.__CONFIG && window.__CONFIG.GIST_ID;
-    const fname = (window.__CONFIG && window.__CONFIG.GIST_FILENAME) || 'records.json';
-    if(!gid) throw new Error('GIST_ID missing');
-    if(!token) throw new Error('Missing GitHub PAT for write');
-    const body = { files: {} };
-    body.files[fname] = { content: JSON.stringify(records, null, 2) };
-    const resp = await fetch(`https://api.github.com/gists/${gid}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if(!resp.ok){
-      const text = await resp.text();
-      console.error('Gist save failed', resp.status, text);
-      return false;
-    }
-    return true;
-  }catch(e){ console.error('cloudSave error', e); return false; }
-}
+function getCoreUrls(){ const ce=(window.__CONFIG&&window.__CONFIG.coreengine)||{}; return { configUrl: ce.configUrl||'', dbUrl: ce.dbUrl||'' } }
+function requireSession(){ const auth=sessionStorage.getItem('cedb_auth')||''; if(!auth){ window.location.href='login.html'; return null } return auth }
+function setAuthedUI(){ document.getElementById('auth-status').textContent='✅ Session active'; document.getElementById('logout').style.display=''; document.getElementById('logout').addEventListener('click',()=>{ try{ sessionStorage.removeItem('cedb_auth') }catch(_e){} window.location.href='login.html' }) }
+async function readRemote(){ try{ const {dbUrl}=getCoreUrls(); const auth=requireSession(); if(!auth) return []; const r=await fetch(dbUrl,{ cache:'no-store', mode:'cors', credentials:'omit', headers:{ 'Authorization':auth } }); if(!r.ok) return []; const et=r.headers.get('etag'); if(et) localStorage.setItem('cedb_etag', et); const t=await r.text(); try{ return JSON.parse(t) }catch(_){ return [] } }catch(_e){ return [] } }
+async function writeRemote(records, opts){ try{ const {dbUrl}=getCoreUrls(); const auth=requireSession(); if(!auth) return false; const et=localStorage.getItem('cedb_etag')||''; const headers=Object.assign({ 'Content-Type':'application/json', 'Authorization':auth }, et?{ 'If-Match': et }: {}, (opts&&opts.allowEmpty)? { 'X-Allow-Empty-Write':'true' } : {}); const body=JSON.stringify(records,null,2); const r=await fetch(dbUrl,{ method:'PUT', headers, body, mode:'cors', credentials:'omit' }); if(r.status===412) { document.getElementById('status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok) { document.getElementById('status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) localStorage.setItem('cedb_etag', newEt); return true }catch(_e){ document.getElementById('status').textContent='❌ Write error'; return false } }
+setAuthedUI();
 
 function nextId(){ return crypto.randomUUID(); }
-
-document.getElementById('set-pat').addEventListener('click', (e)=>{ setGistTokenFromInput(); });
 
 document.getElementById('row-form').addEventListener('submit', async e=>{
   e.preventDefault();
@@ -175,18 +67,18 @@ document.getElementById('row-form').addEventListener('submit', async e=>{
   const metakey = document.getElementById('metakey').value.trim();
   const metavalue = document.getElementById('metavalue').value.trim();
   if(!Number.isFinite(relid) || !prefix || !collection || !metakey) return;
-  let records = await cloudLoad(gistToken);
+  let records = await readRemote();
   if(!records) records = [];
   const id = nextId();
   const now = new Date().toISOString();
   const rec = { id, relid, prefix, collection, metakey, metavalue, datecreated: now, dateupdated: now };
   records.push(rec);
-  const ok = await cloudSave(records, gistToken);
+  const ok = await writeRemote(records);
   if(ok){
-    document.getElementById('status').textContent = 'Saved to Gist.';
+    document.getElementById('status').textContent = 'Saved to CoreEngineDB.';
     e.target.reset();
   } else {
-    document.getElementById('status').textContent = 'Save failed — ensure you set a valid GitHub PAT with gist scope.';
+    document.getElementById('status').textContent = 'Save failed — check credentials or conflicts.';
   }
 });
 </script>

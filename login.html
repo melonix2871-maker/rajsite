@@ -16,14 +16,18 @@
   <span id="config-status" style="color:#a00"></span>
   <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
 </div>
-<div id="firebase-ui"></div>
+<form id="login-form" style="margin-top:12px;max-width:360px">
+  <label style="display:block;margin:8px 0">Username <input id="login-username" autocomplete="username"></label>
+  <label style="display:block;margin:8px 0">Password <input id="login-password" type="password" autocomplete="current-password"></label>
+  <button type="submit">Sign In</button>
+</form>
 <div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
-<!-- Firebase integration -->
 <script src="config.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebaseui@6.1.0/dist/firebaseui.js"></script>
-<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firebaseui@6.1.0/dist/firebaseui.css"/>
+<script>
+function getCoreUrls(){
+  const ce = (window.__CONFIG && window.__CONFIG.coreengine) || {}
+  return { configUrl: ce.configUrl || '', dbUrl: ce.dbUrl || '' }
+}
 <script>
 // Diagnostic: check config.js is served and show status
 async function checkConfigJs(){
@@ -45,77 +49,23 @@ async function checkConfigJs(){
   }
 }
 checkConfigJs();
-async function initFirebaseLogin(){
+async function tryLogin(username, password){
   try{
-    // Check if config.js loaded
-    if(!window.__CONFIG || !window.__CONFIG.firebase){
-      document.getElementById('status').textContent = '❌ Firebase not configured (config.js missing)';
-      return;
-    }
-
-    // Initialize Firebase
-    const firebaseConfig = window.__CONFIG.firebase;
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
-    // Initialize FirebaseUI
-    const ui = new firebaseui.auth.AuthUI(auth);
-    function isAdminUser(user){
-      if(!user) return false;
-      const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
-      const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
-      const uid = user.uid || '';
-      const uname = user.displayName || user.email || '';
-      return String(uid) === String(allowedId) || String(uname) === String(allowedName);
-    }
-
-    const uiConfig = {
-      callbacks: {
-        signInSuccessWithAuthResult: function(authResult, redirectUrl) {
-          const user = authResult.user;
-          const dest = isAdminUser(user) ? 'admin.html' : 'index.html';
-          console.log('✅ User signed in:', user.uid, user.email, '→', dest);
-          window.location.href = dest;
-          return false;
-        },
-        uiShown: function() {
-          document.getElementById('status').textContent = 'Ready to sign in...';
-        }
-      },
-      signInFlow: 'popup',
-      signInOptions: [
-        {
-          provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
-          requireDisplayName: true
-        },
-        firebase.auth.GoogleAuthProvider.PROVIDER_ID,
-        firebase.auth.GithubAuthProvider.PROVIDER_ID
-      ],
-      privacyPolicyUrl: '#'
-    };
-
-    // Check current auth state
-    auth.onAuthStateChanged(user => {
-      if(user){
-        // User is signed in
-        document.getElementById('status').textContent = '✅ Signed in as: ' + (user.displayName || user.email);
-        document.getElementById('firebase-ui').innerHTML = '<button onclick="firebase.auth().signOut(); location.reload();">Sign Out</button>';
-        // Redirect based on admin status
-        const dest = isAdminUser(user) ? 'admin.html' : 'index.html';
-        setTimeout(() => { window.location.href = dest; }, 500);
-      } else {
-        // User is not signed in, show FirebaseUI
-        document.getElementById('status').textContent = 'Not signed in';
-        ui.start('#firebase-ui', uiConfig);
-      }
-    });
-  }catch(e){ 
-    document.getElementById('status').textContent = '❌ Auth initialization error'; 
-    console.error('Firebase init error:', e);
-  }
+    const { dbUrl } = getCoreUrls()
+    if(!dbUrl){ document.getElementById('status').textContent = '❌ Missing CoreEngineDB URL'; return }
+    const auth = 'Basic ' + btoa(String(username)+':'+String(password))
+    const r = await fetch(dbUrl, { method:'HEAD', headers: { 'Authorization': auth }, mode:'cors', credentials:'omit' })
+    if(r.ok){ sessionStorage.setItem('cedb_auth', auth); window.location.href='admin.html'; }
+    else { document.getElementById('status').textContent = '❌ Invalid credentials'; }
+  }catch(e){ document.getElementById('status').textContent = '❌ Login error' }
 }
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', initFirebaseLogin);
+document.getElementById('login-form').addEventListener('submit', (e)=>{
+  e.preventDefault()
+  const u = document.getElementById('login-username').value.trim()
+  const p = document.getElementById('login-password').value.trim()
+  if(!u || !p){ document.getElementById('status').textContent = 'Enter username and password'; return }
+  tryLogin(u,p)
+})
+</script>
 </body>
 </html>
