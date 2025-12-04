@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -52,16 +52,21 @@ jobs:
         run: |
           echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > site/config.js
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v4
-
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
-      - name: Wait for artifact
-        run: sleep 5
-
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v3
