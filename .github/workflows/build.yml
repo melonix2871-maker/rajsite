@@ -1,4 +1,4 @@
-name: Build and Deploy Pages
+name: pages build and deployment
 
 on:
   push:
@@ -9,12 +9,13 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,26 +42,32 @@ jobs:
 
       - name: Prepare site directory
         run: |
-          rm -rf site
-          mkdir site
-          cp *.html site/ || true
-          cp *.js site/ || true
-          cp *.md site/ || true
-          cp *.json site/ || true
-          cp records.json site/records.json || true
+          rm -rf _site
+          mkdir _site
+          cp *.html _site/ || true
+          cp *.js _site/ || true
+          cp *.md _site/ || true
+          cp *.json _site/ || true
+          cp records.json _site/records.json || true
 
       - name: Create runtime config (client-safe)
         env:
           CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
         run: |
-          echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > site/config.js
+          echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > _site/config.js
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
-          retention-days: 1
+          path: _site
 
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
