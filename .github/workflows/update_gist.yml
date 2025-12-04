@@ -1,0 +1,50 @@
+name: Update Gist (manual or programmatic)
+
+on:
+  workflow_dispatch:
+    inputs:
+      records_json:
+        description: 'Optional JSON payload to write to the Gist (if not provided, will read records.json from repo)'
+        required: false
+  repository_dispatch:
+    types: [update-records]
+
+permissions:
+  contents: read
+
+jobs:
+  update-gist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update gist via API
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_FILENAME: ${{ secrets.GIST_FILENAME }}
+          RECORDS_JSON: ${{ github.event.inputs.records_json || '' }}
+        run: |
+          python3 - <<'PY'
+          import os,sys,json,urllib.request
+          pat=os.environ.get('PAT_TOKEN')
+          gist_id=os.environ.get('GIST_ID')
+          fname=os.environ.get('GIST_FILENAME') or 'records.json'
+          payload=os.environ.get('RECORDS_JSON')
+          if payload:
+            content = payload
+          else:
+            try:
+              content = open('records.json','r').read()
+            except Exception as e:
+              print('No records.json found and no payload provided')
+              sys.exit(1)
+          if not pat or not gist_id:
+            print('PAT_TOKEN or GIST_ID not configured in secrets')
+            sys.exit(1)
+          data = { 'files': { fname: { 'content': content } } }
+          req=urllib.request.Request(f"https://api.github.com/gists/{gist_id}", data=json.dumps(data).encode('utf-8'), headers={"Authorization":f"token {pat}","User-Agent":"gha","Content-Type":"application/json"}, method='PATCH')
+          resp=urllib.request.urlopen(req)
+          print('Gist updated, status:', resp.status)
+          PY

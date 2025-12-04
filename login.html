@@ -15,26 +15,45 @@
 <button id="sign-in">Sign in</button>
 <button id="sign-out" style="display:none">Sign out</button>
 <div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
-<script src="https://js.puter.com/v2/"></script>
+<!-- Clerk integration: expects `window.__CONFIG.CLERK_PUBLISHABLE_KEY` to be provided at build time -->
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
 <script>
-async function updateAuthUI(){
+async function initClerkLogin(){
   try{
-    if(puter.auth.isSignedIn()){
-      const u = await puter.auth.getUser();
-      document.getElementById('status').textContent = 'Signed in as: ' + (u&&u.username||'');
-      document.getElementById('sign-in').style.display='none';
-      document.getElementById('sign-out').style.display='';
-      window.location.href='admin.html';
-    }else{
-      document.getElementById('status').textContent = 'Not signed in';
-      document.getElementById('sign-in').style.display='';
-      document.getElementById('sign-out').style.display='none';
+    if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
+      document.getElementById('status').textContent = 'Clerk not configured';
+      return;
     }
-  }catch(_e){ document.getElementById('status').textContent='Error'; }
+    await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
+    const clerk = Clerk;
+    async function updateUI(){
+      try{
+        const user = await (clerk.user?.get?.() || clerk.user);
+        if(user){
+          document.getElementById('status').textContent = 'Signed in as: ' + (user.username || user.email || '');
+          document.getElementById('sign-in').style.display='none';
+          document.getElementById('sign-out').style.display='';
+          window.location.href='admin.html';
+        } else {
+          document.getElementById('status').textContent = 'Not signed in';
+          document.getElementById('sign-in').style.display='';
+          document.getElementById('sign-out').style.display='none';
+        }
+      }catch(_e){ document.getElementById('status').textContent='Not signed in'; }
+    }
+    document.getElementById('sign-in').addEventListener('click', ()=>{
+      clerk.openSignIn && clerk.openSignIn({ redirectUrl: window.location.origin + '/admin.html' });
+      if(!clerk.openSignIn){ window.location.href = 'https://clerk.com/sign-in?redirect_url=' + encodeURIComponent(window.location.origin + '/admin.html'); }
+    });
+    document.getElementById('sign-out').addEventListener('click', async ()=>{
+      try{ await clerk.signOut?.(); }catch(_e){}
+      updateUI();
+    });
+    updateUI();
+  }catch(e){ document.getElementById('status').textContent = 'Auth init error'; }
 }
-document.getElementById('sign-in').addEventListener('click', async ()=>{ try{ await puter.auth.signIn(); }catch(_e){} updateAuthUI(); });
-document.getElementById('sign-out').addEventListener('click', async ()=>{ try{ await puter.auth.signOut(); }catch(_e){} updateAuthUI(); });
-updateAuthUI();
+initClerkLogin();
 </script>
 </body>
 </html>

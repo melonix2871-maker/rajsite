@@ -7,6 +7,13 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230066ff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
 </head>
 <body>
+<div id="auth-ui" style="margin-bottom:12px">
+  <span id="user-echo">Not signed in</span>
+  <button id="sign-in-btn">Sign in</button>
+  <button id="sign-out-btn" style="display:none">Sign out</button>
+</div>
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
 <div id="json-output" style="display:none"></div>
 <h1>Data</h1>
 <div style="margin:8px 0">
@@ -85,6 +92,38 @@ echo json_encode($result, JSON_PRETTY_PRINT);
 ?>
 </script>
 <script>
+// Clerk UI: show signed-in user details and sign-in/out
+(function(){
+  const loadClerkUI = async ()=>{
+    try{
+      if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY) return;
+      await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
+      const clerk = Clerk;
+      async function refresh(){
+        try{
+          const user = await (clerk.user?.get?.() || clerk.user);
+          if(user){
+            const uname = user.username || user.email || '';
+            document.getElementById('user-echo').textContent = `You login as '${uname}'`;
+            document.getElementById('sign-in-btn').style.display='none';
+            document.getElementById('sign-out-btn').style.display='';
+          } else {
+            document.getElementById('user-echo').textContent = 'Not signed in';
+            document.getElementById('sign-in-btn').style.display='';
+            document.getElementById('sign-out-btn').style.display='none';
+          }
+        }catch(e){ document.getElementById('user-echo').textContent='Not signed in'; }
+      }
+      document.getElementById('sign-in-btn').addEventListener('click', ()=>{ clerk.openSignIn && clerk.openSignIn({ redirectUrl: window.location.href }); if(!clerk.openSignIn) window.location.href='https://clerk.com/sign-in?redirect_url='+encodeURIComponent(window.location.href); });
+      document.getElementById('sign-out-btn').addEventListener('click', async ()=>{ try{ await clerk.signOut?.(); }catch(_e){} refresh(); });
+      refresh();
+    }catch(_e){}
+  };
+  // load config then clerk if available
+  if(window.__CONFIG && window.__CONFIG.CLERK_PUBLISHABLE_KEY){ loadClerkUI(); }
+  else { window.addEventListener('load', loadClerkUI); }
+})();
+
 function getJson(){
   const ls = localStorage.getItem('records');
   if(ls){ try{ return JSON.parse(ls) } catch(_e){ return null } }
