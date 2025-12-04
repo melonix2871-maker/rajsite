@@ -38,9 +38,13 @@ jobs:
 
       - name: Prepare site directory
         run: |
+          rm -rf site
           mkdir site
-          cp -R . site/
-          mv records.json site/records.json || true
+          cp *.html site/ || true
+          cp *.js site/ || true
+          cp *.md site/ || true
+          cp *.json site/ || true
+          cp records.json site/records.json || true
 
       - name: Create runtime config (client-safe)
         env:
