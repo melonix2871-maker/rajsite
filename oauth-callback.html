@@ -14,6 +14,10 @@
 <h2>Processing OAuth Response...</h2>
 <div class="spinner"></div>
 <div id="status">Exchanging authorization code...</div>
+<div style="margin-top:6px;font-size:13px">
+  <span id="config-status" style="color:#a00"></span>
+  <button id="recheck-config" onclick="(async()=>{try{const r=await fetch('config.js',{cache:'no-store'}); document.getElementById('config-status').textContent = r.ok ? '✅ config.js loaded' : '❌ config.js not found (HTTP ' + r.status + ')'; }catch(e){ document.getElementById('config-status').textContent='❌ config.js fetch error'; }} )()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
+</div>
 
 <script>
 // Build script will inject these from .env.local
@@ -116,6 +120,17 @@ async function handleGoogleCallback() {
 }
 
 handleGoogleCallback();
+
+// Small diagnostic: check config.js availability
+;(async function(){
+  const el = document.getElementById('config-status');
+  if(!el) return;
+  try{
+    const r = await fetch('config.js', { cache: 'no-store' });
+    if(r.ok){ el.textContent = '✅ config.js loaded'; el.style.color = '#070'; }
+    else { el.textContent = '❌ config.js not found (HTTP ' + r.status + ')'; el.style.color = '#a00'; }
+  }catch(e){ el.textContent = '❌ config.js fetch error'; el.style.color = '#a00'; console.error('config check error', e); }
+})();
 </script>
 </body>
 </html>

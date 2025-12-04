@@ -29,6 +29,11 @@
   <span id="token-status" style="margin-left:8px;color:#070"></span>
 </div>
 
+<div style="margin-top:6px;font-size:13px">
+  <span id="config-status" style="color:#a00"></span>
+  <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
+</div>
+
 <h1>Data Table</h1>
 <table>
   <thead>
@@ -70,12 +75,24 @@
   <p style="color: #666; font-size: 12px;">To persist to Gist: Copy JSON, then go to GitHub Actions → "Update Gist" → Run workflow → Paste JSON.</p>
 </div>
 
-<script src="/config.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script>
 // In-memory PAT for Gist writes (never persisted)
 let gistToken = null;
+
+// Diagnostic: check config.js is served and show status
+async function checkConfigJs(){
+  const el = document.getElementById('config-status');
+  if(!el) return;
+  try{
+    const r = await fetch('config.js', { cache: 'no-store' });
+    if(r.ok){ el.textContent = '✅ config.js loaded'; el.style.color = '#070'; }
+    else { el.textContent = '❌ config.js not found (HTTP ' + r.status + ')'; el.style.color = '#a00'; }
+  }catch(e){ el.textContent = '❌ config.js fetch error'; el.style.color = '#a00'; console.error('checkConfigJs error', e); }
+}
+checkConfigJs();
 
 function setGistTokenFromInput(){
   const v = document.getElementById('gist-pat').value.trim();
