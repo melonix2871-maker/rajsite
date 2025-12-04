@@ -17,6 +17,9 @@
   <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
 </div>
 <script src="config.js"></script>
+<script>
+if(!window.__CONFIG || !window.__CONFIG.coreengine){ window.__CONFIG = { coreengine: { configUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/config.json', dbUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/db.json' } } }
+</script>
 <!-- CoreEngineDB config is provided by config.js -->
 <script>
 // Diagnostic: check config.js is served and show status

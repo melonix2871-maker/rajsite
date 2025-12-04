@@ -25,9 +25,11 @@
   <span id="config-status" style="color:#a00"></span>
   <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
 </div>
-<div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
 <div style="margin-top:8px;color:#333">CoreEngineDB-backed admin. Changes are persisted to the remote JSON.</div>
 <script src="config.js"></script>
+<script>
+if(!window.__CONFIG || !window.__CONFIG.coreengine){ window.__CONFIG = { coreengine: { configUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/config.json', dbUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/db.json' } } }
+</script>
 <!-- CoreEngineDB runtime config is provided by config.js -->
 <script>
 // Diagnostic: check config.js is served and show status

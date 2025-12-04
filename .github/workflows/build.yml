@@ -34,7 +34,6 @@ jobs:
           echo ""
           echo "=== Copying files to /tmp/deploy ==="
           cp admin.html /tmp/deploy/
-          cp db.html /tmp/deploy/
           cp index.html /tmp/deploy/
           cp login.html /tmp/deploy/
           cp oauth-callback.html /tmp/deploy/
