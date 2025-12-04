@@ -58,11 +58,17 @@
   </div>
 <script>
 // Build script will inject these from .env.local
+<<<<<<< HEAD
 const GITHUB_TOKEN = '';
 const GIST_ID = '';
 const GIST_FILENAME = 'records.json';
 const ADMIN_USER_ID = 'user_36O9lkmQMpdYK9mm4BNHvKKKsME';
 const ADMIN_USERNAME = 'kwlasing_superadmin';
+=======
+const GITHUB_TOKEN = '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';
+const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
+const GIST_FILENAME = 'records.json';
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
 const KEY='records';
 function parseTbody(){
   const rows=[...document.querySelectorAll('tbody tr')];
@@ -118,6 +124,7 @@ function render(records){
   }
 }
 async function ensure(){const cloud=await cloudLoad();if(cloud){const seqd=assignSeq(cloud);save(seqd);render(seqd)}else{const cur=load();if(cur){const seqd=assignSeq(cur);save(seqd);render(seqd)}else{const seed=parseTbody();const seqd=assignSeq(seed);save(seqd);render(seqd)}}}
+<<<<<<< HEAD
 async function guard(){
   try{
     // Check if Clerk user is loaded
@@ -172,6 +179,10 @@ async function guard(){
   }
 }
 document.getElementById('logout').addEventListener('click',async()=>{ localStorage.removeItem('auth_token'); localStorage.removeItem('auth_profile'); window.location.href='login.html'; });
+=======
+async function guard(){try{if(localStorage.getItem('auth_token')){const token=localStorage.getItem('auth_token');document.getElementById('auth-status').textContent='Authenticated';document.getElementById('logout').style.display='';}else{document.getElementById('auth-status').textContent='Not authenticated';document.getElementById('logout').style.display='none';}}catch(_e){document.getElementById('auth-status').textContent='Auth check failed';}}
+document.getElementById('logout').addEventListener('click',async()=>{localStorage.removeItem('auth_token');window.location.href='login.html';});
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
 guard();
 document.getElementById('row-form').addEventListener('submit',async e=>{
   e.preventDefault();

@@ -25,6 +25,7 @@
 <div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
 <script>
 // Build script will inject these from .env.local
+<<<<<<< HEAD
 const GITHUB_TOKEN = '';
 const GIST_ID = '';
 const GIST_FILENAME = 'records.json';
@@ -68,12 +69,30 @@ async function guard(){
     }else{
       document.getElementById('auth-status').textContent='Authenticated ('+username+')';
       document.getElementById('logout').style.display='';
+=======
+const GITHUB_TOKEN = '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';
+const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
+const GIST_FILENAME = 'records.json';
+
+async function guard(){
+  try{
+    if(localStorage.getItem('auth_token')){
+      const token=localStorage.getItem('auth_token');
+      document.getElementById('auth-status').textContent='Authenticated';
+      document.getElementById('logout').style.display='';
+    }else{
+      document.getElementById('auth-status').textContent='Not authenticated';
+      document.getElementById('logout').style.display='none';
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
     }
   }catch(_e){ document.getElementById('auth-status').textContent='Auth check failed'; }
 }
 document.getElementById('logout').addEventListener('click', async ()=>{ 
   localStorage.removeItem('auth_token'); 
+<<<<<<< HEAD
   localStorage.removeItem('auth_profile'); 
+=======
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
   window.location.href='login.html'; 
 });
 guard();

@@ -18,6 +18,7 @@
   <img alt="Logo" width="36" height="36" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%230066ff'/%3E%3Ctext x='18' y='23' font-size='16' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
   <span style="font-size:18px;font-weight:600">Admin Login</span>
 </div>
+<<<<<<< HEAD
 
 <div id="auth-ui" style="display:none">
   <h2>Already Signed In</h2>
@@ -52,6 +53,25 @@ window.addEventListener('load', async () => {
       console.warn('Clerk publishable key not configured, showing fallback form');
       showFallbackForm();
       return;
+=======
+<h1>Login</h1>
+<div id="status" style="margin-bottom:12px"></div>
+<button id="sign-in">Sign in</button>
+<button id="sign-out" style="display:none">Sign out</button>
+<div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
+<script>
+async function updateAuthUI(){
+  try{
+    if(localStorage.getItem('auth_token')){
+      document.getElementById('status').textContent = 'Already authenticated';
+      document.getElementById('sign-in').style.display='none';
+      document.getElementById('sign-out').style.display='';
+      setTimeout(()=>{ window.location.href='admin.html'; }, 1000);
+    }else{
+      document.getElementById('status').textContent = 'Not signed in';
+      document.getElementById('sign-in').style.display='';
+      document.getElementById('sign-out').style.display='none';
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
     }
     
     // Initialize Clerk
@@ -182,6 +202,18 @@ if (window.Clerk) {
     }
   });
 }
+<<<<<<< HEAD
+=======
+document.getElementById('sign-in').addEventListener('click', async ()=>{ 
+  localStorage.setItem('auth_token','authenticated'); 
+  updateAuthUI(); 
+});
+document.getElementById('sign-out').addEventListener('click', async ()=>{ 
+  localStorage.removeItem('auth_token'); 
+  updateAuthUI(); 
+});
+updateAuthUI();
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
 </script>
 </body>
 </html>

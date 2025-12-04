@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #!/usr/bin/env node
 /**
  * Simple build script to inject environment variables into HTML files.
@@ -61,3 +62,48 @@ files.forEach(file => {
 });
 
 console.log('Build complete!');
+=======
+#!/usr/bin/env node
+/**
+ * Simple build script to inject environment variables into HTML files.
+ * Reads from .env.local and replaces placeholders in JS.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// Load .env.local
+const envPath = path.join(__dirname, '.env.local');
+const env = {};
+
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const [key, value] = line.split('=');
+    if (key && value) env[key.trim()] = value.trim();
+  });
+}
+
+const GITHUB_TOKEN = env.GITHUB_TOKEN || '';
+const GIST_ID = env.GIST_ID || '';
+
+// Files to update
+const files = ['admin.html', 'db.html', 'index.html', 'login.html'];
+const baseDir = __dirname;
+
+files.forEach(file => {
+  const filePath = path.join(baseDir, file);
+  if (!fs.existsSync(filePath)) return;
+
+  let content = fs.readFileSync(filePath, 'utf-8');
+
+  // Replace all instances
+  content = content.replace(/const GITHUB_TOKEN = '.*?';/g, `const GITHUB_TOKEN = '${GITHUB_TOKEN}';`);
+  content = content.replace(/const GIST_ID = '.*?';/g, `const GIST_ID = '${GIST_ID}';`);
+
+  fs.writeFileSync(filePath, content, 'utf-8');
+  console.log(`✓ Updated ${file}`);
+});
+
+console.log('Build complete!');
+>>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
