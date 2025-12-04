@@ -14,36 +14,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch Gist content
+      - name: Create runtime config (CoreEngineDB)
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-          GIST_ID: ${{ secrets.GIST_ID }}
-          GIST_FILENAME: ${{ secrets.GIST_FILENAME }}
+          REMOTE_DB_CONFIG: ${{ secrets.REMOTE_DB_CONFIG }}
+          REMOTE_DB_JSON: ${{ secrets.REMOTE_DB_JSON }}
         run: |
-          python3 - <<'PY'
-          import os,sys,json,urllib.request
-          pat=os.environ.get('PAT_TOKEN')
-          gist_id=os.environ.get('GIST_ID')
-          fname=os.environ.get('GIST_FILENAME') or 'records.json'
-          if not pat or not gist_id:
-            open('records.json','w').write('[]')
-            sys.exit(0)
-          req=urllib.request.Request(f"https://api.github.com/gists/{gist_id}", headers={"Authorization":f"token {pat}","User-Agent":"gha"})
-          data=json.load(urllib.request.urlopen(req))
-          content=data.get('files',{}).get(fname,{}).get('content','[]')
-          open('records.json','w').write(content)
-          PY
-
-      - name: Create runtime config (client-safe)
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
-        run: |
-          echo "window.__CONFIG = { firebase: { apiKey: '${FIREBASE_API_KEY}', authDomain: '${FIREBASE_AUTH_DOMAIN}', projectId: '${FIREBASE_PROJECT_ID}', storageBucket: '${FIREBASE_STORAGE_BUCKET}', messagingSenderId: '${FIREBASE_MESSAGING_SENDER_ID}', appId: '${FIREBASE_APP_ID}' }, GIST_ID: '${{ secrets.GIST_ID }}', GIST_FILENAME: '${{ secrets.GIST_FILENAME }}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > config.js
+          echo "window.__CONFIG = { coreengine: { configUrl: '${REMOTE_DB_CONFIG}', dbUrl: '${REMOTE_DB_JSON}' } };" > config.js
           echo "Generated config.js:"
           cat config.js
 
@@ -64,7 +40,6 @@ jobs:
           cp oauth-callback.html /tmp/deploy/
           cp CNAME /tmp/deploy/
           cp config.js /tmp/deploy/
-          cp records.json /tmp/deploy/
           cp *.md /tmp/deploy/ 2>/dev/null || true
           echo ""
           echo "=== Files in /tmp/deploy ==="

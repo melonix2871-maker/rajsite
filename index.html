@@ -8,8 +8,8 @@
 </head>
 <body>
 <div id="auth-ui" style="margin-bottom:12px">
-  <span id="user-echo">Not signed in</span>
-  <button id="sign-in-btn">Sign in</button>
+  <span id="user-echo">Read-only mode</span>
+  <button id="sign-in-btn" onclick="window.location.href='login.html'">Admin Login</button>
   <button id="sign-out-btn" style="display:none">Sign out</button>
 </div>
 <div style="margin-top:6px;font-size:13px">
@@ -17,8 +17,7 @@
   <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
 </div>
 <script src="config.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<!-- CoreEngineDB config is provided by config.js -->
 <script>
 // Diagnostic: check config.js is served and show status
 async function checkConfigJs(){
@@ -55,104 +54,30 @@ checkConfigJs();
   </thead>
   <tbody></tbody>
   </table>
-<script async type="text/javascript" src="https://cdn.jsdelivr.net/npm/php-wasm/php-tags.jsdelivr.mjs"></script>
-<script id="db" src="db.html" type="text/html"></script>
-<script type="text/php" data-stdin="#db" data-stdout="#json-output">
-<?php
-error_reporting(E_ERROR | E_PARSE);
-libxml_use_internal_errors(true);
-$html = file_get_contents('php://stdin');
-$dom = new DOMDocument();
-$dom->loadHTML($html);
-$rows = $dom->getElementsByTagName('tr');
-$result = [];
-foreach ($rows as $row) {
-  $cells = $row->getElementsByTagName('td');
-  if ($cells->length === 0) { continue; }
-  $nameCell = $cells->item(0);
-  $anchors = $nameCell->getElementsByTagName('a');
-  $user_link = '';
-  $name = '';
-  for ($i = 0; $i < $anchors->length; $i++) {
-    $href = $anchors->item($i)->getAttribute('href');
-    $text = trim($anchors->item($i)->textContent);
-    if ($href && strpos($href, '/username/') !== false) {
-      $user_link = $href;
-      if ($text) { $name = $text; }
-    }
-  }
-  if ($name === '') { $name = trim($nameCell->textContent); }
-  $height = '';
-  $weight = '';
-  $date   = '';
-  $info   = '';
-  $country = '';
-  if ($cells->length > 1) { $height = trim($cells->item(1)->textContent); }
-  if ($cells->length > 2) { $weight = trim($cells->item(2)->textContent); }
-  if ($cells->length > 3) { $date   = trim($cells->item(3)->textContent); }
-  if ($cells->length > 4) { $info   = trim($cells->item(4)->textContent); }
-  if ($cells->length > 5) {
-    $countryCell = $cells->item(5);
-    $a = $countryCell->getElementsByTagName('a')->item(0);
-    $country = $a ? trim($a->textContent) : trim($countryCell->textContent);
-  }
-  $result[] = [
-    "user_link" => $user_link,
-    "name" => $name,
-    "height" => $height,
-    "weight" => $weight,
-    "date" => $date,
-    "info" => $info,
-    "country" => $country
-  ];
+<script>
+async function fetchRemoteJson(){
+  try{
+    if(!window.__CONFIG || !window.__CONFIG.coreengine || !window.__CONFIG.coreengine.dbUrl){ return [] }
+    const url = window.__CONFIG.coreengine.dbUrl
+    const auth = sessionStorage.getItem('cedb_auth') || ''
+    const headers = auth ? { 'Authorization': auth } : {}
+    const r = await fetch(url, { headers, cache:'no-store', mode:'cors', credentials:'omit' })
+    if(!r.ok){ document.getElementById('status').textContent = '0 rows'; return [] }
+    const t = await r.text()
+    try{ return JSON.parse(t) }catch(_){ return [] }
+  }catch(_e){ return [] }
 }
-echo json_encode($result, JSON_PRETTY_PRINT);
-?>
 </script>
 <script>
 // Firebase UI: show signed-in user details and sign-in/out
-(function(){
-  const loadFirebaseUI = async ()=>{
-    try{
-      if(!window.__CONFIG || !window.__CONFIG.firebase) return;
-      const firebaseConfig = window.__CONFIG.firebase;
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth();
-      async function refresh(){
-        try{
-          const user = auth.currentUser;
-          if(user){
-            const uname = user.displayName || user.email || '';
-            document.getElementById('user-echo').textContent = `You logged in as '${uname}'`;
-            document.getElementById('sign-in-btn').style.display='none';
-            document.getElementById('sign-out-btn').style.display='';
-          } else {
-            document.getElementById('user-echo').textContent = 'Not signed in';
-            document.getElementById('sign-in-btn').style.display='';
-            document.getElementById('sign-out-btn').style.display='none';
-          }
-        }catch(e){ document.getElementById('user-echo').textContent='Not signed in'; }
-      }
-      document.getElementById('sign-in-btn').addEventListener('click', ()=>{ window.location.href='login.html'; });
-      document.getElementById('sign-out-btn').addEventListener('click', async ()=>{ try{ await auth.signOut(); }catch(_e){} refresh(); });
-      auth.onAuthStateChanged(user=>{ refresh(); });
-      refresh();
-    }catch(_e){}
-  };
-  // load config then firebase if available
-  if(window.__CONFIG && window.__CONFIG.firebase){ loadFirebaseUI(); }
-  else { window.addEventListener('load', loadFirebaseUI); }
-})();
+// Simple banner; admin login is on login.html
 
-function getJson(){
-  const ls = localStorage.getItem('records');
-  if(ls){ try{ return JSON.parse(ls) } catch(_e){ return null } }
-  const out = document.getElementById('json-output').textContent || document.getElementById('json-output').innerText;
-  if(!out) return null;
-  try { return JSON.parse(out); } catch(_e){ return null; }
+async function getJson(){
+  const data = await fetchRemoteJson()
+  return Array.isArray(data) ? data : []
 }
-function renderFromJson(){
-  const data = getJson();
+async function renderFromJson(){
+  const data = await getJson();
   if(!data) return false;
   const nameQ = document.getElementById('filter-name').value.trim().toLowerCase();
   const countryQ = document.getElementById('filter-country').value.trim().toLowerCase();
@@ -164,10 +89,9 @@ function renderFromJson(){
   tbody.innerHTML = '';
   for(let i=0;i<filtered.length;i++){
     const r = filtered[i];
-    const id = r.seq || (i+1);
-    const link = r.user_link ? `<a href="${r.user_link}">link</a>` : '';
+    const id = r.id || (i+1);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${id}</td><td>${link}</td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${r.date||''}</td><td>${r.info||''}</td><td>${r.country||''}</td>`;
+    tr.innerHTML = `<td>${id}</td><td></td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${r.datecreated||''}</td><td>${r.metavalue||''}</td><td>${r.country||''}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('status').textContent = `${filtered.length} rows`;
@@ -203,7 +127,7 @@ function updateDataTargets(){
   return true;
 }
 document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Name(); updateDataTargets(); });
-const iv = setInterval(()=>{ const a = renderFromJson(); const b = updateId1Name(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 100);
+const iv = setInterval(async ()=>{ const a = await renderFromJson(); const b = updateId1Name(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 500);
 </script>
 <div data-id="1" data-name style="margin-top:8px">display name here</div>
 <div data-id="1" data-weight style="margin-top:8px">display weight here</div>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreEngineDB Development Kit</title>
+  <style>
+  body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#fff;color:#000;margin:0}
+  .wrap{width:100%;padding-bottom:60px}
+  .card{background:#fff;padding:20px}
+  h1{margin:0;color:#000;font-weight:600}
+  #heading-area{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .toolbar{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  input,select,textarea{padding:10px;border:1px solid #d9d9d9;border-radius:8px;background:#fff;color:#000;max-width:100%;width:100%;box-sizing:border-box}
+  button{background:#000;border:1px solid #000;color:#fff;padding:10px 16px;border-radius:8px;cursor:pointer}
+  button.secondary{background:#333;border-color:#333}
+  button.danger{background:#222;border-color:#222}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  pre{background:#f7f7f7;border:1px solid #e6e6e6;border-radius:8px;padding:12px;overflow:auto}
+  .muted{color:#666;font-size:12px}
+  table{width:100%;border-collapse:collapse;background:#fff;margin-top:12px}
+  th,td{padding:10px;border-bottom:1px solid #ededed;text-align:left}
+  th{background:#f5f5f5;color:#000}
+  .tabs{display:flex;gap:8px;margin-top:12px}
+  .tabs button{background:#111;border-color:#111}
+  .tabs button.active{background:#000}
+  #snippetOut{min-height:200px}
+  .howto{background:#f7f7f7;border:1px solid #e6e6e6;border-radius:8px;padding:12px;margin-top:12px}
+  .checklist{background:#f7f7f7;border:1px solid #e6e6e6;border-radius:8px;padding:12px;margin-top:12px}
+  .badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+  .badges input{background:#f7f7f7}
+  .dev-split{display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:16px;align-items:start}
+  .CodeMirror{border:1px solid #e6e6e6;border-radius:8px}
+  .cardbox{border:1px solid #e6e6e6;border-radius:12px;padding:12px;background:#fff}
+  .card-head{font-weight:600;margin-bottom:6px}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  </head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div id="heading-area">
+      <h1 style="display:flex;align-items:center;gap:8px;font-size:24px;"><img src="../logo.png" alt="CoreEngineDB" width="180"><span>Development Kit</span></h1>
+      <div class="toolbar">
+        <button id="test" class="secondary">Test Connection</button>
+        <button id="check" class="secondary">Check Write (HEAD)</button>
+        <button id="load" class="secondary">Load Snapshot</button>
+        <button id="create">Create</button>
+        <button id="update">Update First</button>
+        <button id="delete" class="danger">Delete First</button>
+      </div>
+    </div>
+    <div class="card-head">Endpoints & Headers</div>
+    <div class="muted">Configure snapshot, write path, method and headers used by the actions.</div>
+    <div class="grid">
+      <div>
+        <div class="muted">Snapshot URL</div>
+        <input id="snapshot" value="http://localhost:8080/json/db.json">
+      </div>
+      <div>
+        <div class="muted">Write URL</div>
+        <input id="writeUrl" value="http://localhost:8082/json/db.json">
+      </div>
+      <div>
+        <div class="muted">Write Method</div>
+        <select id="writeMethod"><option>PUT</option><option>POST</option></select>
+      </div>
+      <div style="grid-column:1/-1">
+        <div class="muted">Headers (JSON)</div>
+        <textarea id="headers" rows="3">{}</textarea>
+        <div style="margin-top:6px"><label><input type="checkbox" id="useDefaultAuth"> Use default admin auth</label> <span class="muted">adds Authorization: Basic admin:securepassword</span></div>
+        <div style="margin-top:6px"><label><input type="checkbox" id="allowEmpty"> Allow empty write (danger)</label> <span class="muted">adds X-Allow-Empty-Write: true</span></div>
+      </div>
+      <div>
+        <div class="muted">Prefix</div>
+        <input id="prefix" value="app_">
+      </div>
+      <div>
+        <div class="muted">Collection</div>
+        <input id="collection" value="users">
+      </div>
+      <div>
+        <div class="muted">Metakey</div>
+        <input id="metakey" value="display_name">
+      </div>
+      <div style="grid-column:1/-1">
+        <div class="muted">Metavalue (JSON or text)</div>
+        <textarea id="metavalue" rows="4">{"name":"External User"}</textarea>
+      </div>
+    </div>
+      <div class="card-head">SDK & Snippets</div>
+      <div class="muted">Generate ready-to-use code. Switch tabs to change language.</div>
+      <div class="toolbar">
+        <button id="snippet" class="secondary">Generate Snippet</button>
+      </div>
+      <div class="tabs">
+        <button id="tab-js" class="active">JS</button>
+        <button id="tab-ts">TypeScript</button>
+        <button id="tab-curl">curl</button>
+        <button id="tab-php">PHP</button>
+        <button id="tab-python">Python</button>
+        <button id="tab-sdk">SDK</button>
+        <button id="copy">Copy</button>
+      </div>
+      <div class="dev-split">
+        <div>
+          <div class="cardbox">
+            <div class="card-head">Snippet</div>
+            <textarea id="snippetOut"></textarea>
+          </div>
+        </div>
+        <div>
+          <div class="cardbox">
+            <div class="card-head">Guide & Steps</div>
+            <div class="muted">How to use the SDK safely with ETag/If-Match.</div>
+            <div class="howto" id="howto"></div>
+          </div>
+          <div class="cardbox" style="margin-top:12px">
+            <div class="card-head">Status & Compatibility</div>
+            <div class="badges">
+              <div>
+                <div class="muted">Current ETag</div>
+                <input id="etagOut" readonly>
+              </div>
+              <div>
+                <div class="muted">Last Write Status</div>
+                <input id="writeOut" readonly>
+              </div>
+            </div>
+            <div class="row">
+              <button id="runChecklist">Run Compatibility Checklist</button>
+            </div>
+            <div class="checklist" id="checklist"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cardbox" style="margin-top:12px">
+        <div class="card-head">Output</div>
+        <textarea id="out"></textarea>
+      </div>
+    <div class="muted">Records</div>
+    <table>
+      <thead><tr><th>ID</th><th>prefix</th><th>relid</th><th>collection</th><th>metakey</th><th>metavalue</th><th>updated</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+<script>
+let data=[]
+let etag=null
+let lastLen=0
+let snippetCM=null
+let headersCM=null
+let metaCM=null
+let outCM=null
+function normalizeUrl(u){ try{ const host = location.hostname; let v = String(u||'').trim(); if(v.startsWith('http://localhost') && host==='127.0.0.1') v = v.replace('http://localhost','http://127.0.0.1'); if(v.startsWith('http://127.0.0.1') && host==='localhost') v = v.replace('http://127.0.0.1','http://localhost'); return v }catch(_){ return u } }
+function getHeaders(){ try{ const raw=(headersCM? headersCM.getValue() : document.getElementById('headers').value); const h = raw? JSON.parse(raw):{}; const base = {'Content-Type':'application/json'}; const use = document.getElementById('useDefaultAuth').checked; if(use && !h.Authorization){ base.Authorization = 'Basic '+ btoa('admin:securepassword') } if(document.getElementById('allowEmpty').checked){ base['X-Allow-Empty-Write'] = 'true' } return Object.assign(base, h) }catch(_){ const base={'Content-Type':'application/json'}; const use = document.getElementById('useDefaultAuth').checked; if(use){ base.Authorization = 'Basic '+ btoa('admin:securepassword') } if(document.getElementById('allowEmpty').checked){ base['X-Allow-Empty-Write'] = 'true' } return base } }
+function setEt(et){ document.getElementById('etagOut').value = et || '' }
+function setWriteStatus(s){ document.getElementById('writeOut').value = s || '' }
+function outMode(){ if(active==='js' || active==='sdk') return {name:'javascript'}; if(active==='ts') return {name:'javascript'}; if(active==='curl') return {name:'shell'}; if(active==='php') return {name:'php'}; if(active==='python') return {name:'python'}; return {name:'javascript'} }
+function out(txt){ const el=document.getElementById('out'); const val = typeof txt==='string'? txt : JSON.stringify(txt,null,2); if(outCM){ try{ outCM.setOption('mode', outMode()) }catch(_){ } outCM.setValue(val) } else if(el){ el.value = val } }
+if(!headersCM){ var ha=document.getElementById('headers'); if(ha){ headersCM = CodeMirror.fromTextArea(ha,{ lineNumbers:true, viewportMargin:Infinity, mode:{name:'javascript', json:true}, theme:'dracula' }) } }
+if(!metaCM){ var ma=document.getElementById('metavalue'); if(ma){ metaCM = CodeMirror.fromTextArea(ma,{ lineNumbers:true, viewportMargin:Infinity, mode:{name:'javascript', json:true}, theme:'dracula' }) } }
+if(!outCM){ var oa=document.getElementById('out'); if(oa){ outCM = CodeMirror.fromTextArea(oa,{ lineNumbers:true, readOnly:true, viewportMargin:Infinity, mode:{name:'javascript'}, theme:'default' }) } }
+function snippetMode(k){ if(k==='js' || k==='sdk') return {name:'javascript'}; if(k==='ts') return {name:'javascript'}; if(k==='curl') return {name:'shell'}; if(k==='php') return {name:'php'}; if(k==='python') return {name:'python'}; return {name:'javascript'} }
+function updateSnippetCM(){ var ta=document.getElementById('snippetOut'); if(!ta) return; if(!ta.value) ta.value = ta.textContent; if(!snippetCM){ snippetCM = CodeMirror.fromTextArea(ta,{ lineNumbers:true, readOnly:true, viewportMargin:Infinity, mode:{name:'javascript'}, theme:'dracula' }) } snippetCM.setOption('theme','dracula'); try{ snippetCM.setOption('mode', snippetMode(active)) }catch(_){ } snippetCM.setValue(ta.value) }
+function renderRows(rows){ const tbody=document.getElementById('rows'); tbody.innerHTML = rows.map(r=>`<tr><td>${r.id}</td><td>${r.prefix||''}</td><td>${r.relid||''}</td><td>${r.collection||''}</td><td>${r.metakey||''}</td><td>${typeof r.metavalue==='object'? JSON.stringify(r.metavalue): r.metavalue||''}</td><td>${r.updateddate||r.dateupdated||''}</td></tr>`).join('') }
+async function testConn(){ try{ const snap = normalizeUrl(document.getElementById('snapshot').value); const r = await fetch(snap,{cache:'no-store', mode:'cors', credentials:'omit'}); if(!r.ok){ out('Snapshot GET failed: '+r.status); return } const et = r.headers.get('etag'); if(et) etag=et; setEt(etag); out('Snapshot OK'+(etag? ' ETag='+etag:'')) }catch(e){ out('Connection error: '+String(e||'')) } }
+async function checkWrite(){ try{ const url=normalizeUrl(document.getElementById('writeUrl').value); const headers=getHeaders(); const r = await fetch(url,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); const et=r.headers.get('etag'); if(et) etag=et; setEt(etag); out('Write HEAD '+(r.ok?'OK ':'ERR ')+r.status+' ETag='+(et||'')); }catch(e){ out('HEAD error: '+String(e||'')) } }
+async function loadSnapshot(){ try{ const snap = normalizeUrl(document.getElementById('snapshot').value); const r = await fetch(snap,{cache:'no-store', mode:'cors', credentials:'omit'}); if(!r.ok){ out('Load failed: '+r.status); return } etag = r.headers.get('etag'); setEt(etag); const t = await r.text(); try{ data = JSON.parse(t) }catch(_){ data=[] } lastLen = Array.isArray(data)? data.length : 0; renderRows(await list({ prefix:document.getElementById('prefix').value, collection:document.getElementById('collection').value })) ; out('Loaded '+data.length+' records') }catch(e){ out('Error: '+String(e||'')) } }
+function migrate(){ const byKey={}; data.forEach(r=>{ if(!r.prefix) r.prefix='app_'; const k=r.prefix+':'+(r.collection||''); if(!byKey[k]) byKey[k]=0; if(!r.relid){ byKey[k]++; r.relid=byKey[k] } else { byKey[k]=Math.max(byKey[k], Number(r.relid)||0) } }) }
+async function list(filter){ migrate(); let a=data.slice(); if(filter){ if(filter.prefix) a=a.filter(r=>r.prefix===filter.prefix); if(filter.collection) a=a.filter(r=>r.collection===filter.collection) } return a }
+function nextId(){ return (data.reduce((m,r)=>Math.max(m,Number(r.id)||0),0)||0)+1 }
+function nextRelid(prefix,collection){ const a=data.filter(r=>r.prefix===prefix && r.collection===collection); return a.reduce((m,r)=>Math.max(m,Number(r.relid)||0),0)+1 }
+async function writeAll(){ const url=normalizeUrl(document.getElementById('writeUrl').value); const method=document.getElementById('writeMethod').value; const headers=getHeaders(); if(!etag){ try{ const rh0 = await fetch(url,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); const et0 = rh0.headers.get('etag'); if(et0) etag=et0; setEt(etag); }catch(_){ } } const drop = Math.max(0, (lastLen||0) - (Array.isArray(data)? data.length : 0)); const ratio = (lastLen||0) ? (drop / lastLen) : 0; if(drop>=100 || ratio>=0.5){ const ok = confirm(`You are about to delete ${drop} records (${Math.round(ratio*100)}%). Continue?`); if(!ok){ out('Write cancelled'); return false } } const hdrs = etag? Object.assign({}, headers, {'If-Match': etag}) : headers; let r = await fetch(url,{method, headers: hdrs, body: JSON.stringify(data,null,2), mode:'cors', credentials:'omit'}); if(r.status===412){ const rh = await fetch(url,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); const et = rh.headers.get('etag'); if(et) etag=et; setEt(etag); const hdrs2 = etag? Object.assign({}, headers, {'If-Match': etag}) : headers; r = await fetch(url,{method, headers: hdrs2, body: JSON.stringify(data,null,2), mode:'cors', credentials:'omit'}); } if(!r.ok){ setWriteStatus(String(r.status)); out('Write failed: '+r.status); return false } const newEt = r.headers.get('etag'); if(newEt) etag=newEt; setEt(etag); setWriteStatus('200'); lastLen = Array.isArray(data)? data.length : 0; return true }
+async function create(){ let mv=(metaCM? metaCM.getValue() : document.getElementById('metavalue').value); try{ mv = JSON.parse(mv) }catch(_){ } const prefix=document.getElementById('prefix').value; const collection=document.getElementById('collection').value; const id=nextId(); const relid=nextRelid(prefix,collection); const now=new Date().toISOString(); const row={ id, relid, prefix, collection, metakey:document.getElementById('metakey').value, metavalue: mv, createddate:now, updateddate:now }; data.push(row); const ok = await writeAll(); if(ok){ out(row); renderRows(await list({ prefix, collection })) } }
+async function updateFirst(){ const rows = await list({ prefix:document.getElementById('prefix').value, collection:document.getElementById('collection').value }); if(!rows.length){ out('No rows to update'); return } const now=new Date().toISOString(); rows[0].metavalue = { updated:true }; rows[0].updateddate = now; const ok = await writeAll(); if(ok){ out(rows[0]); renderRows(await list({ prefix:document.getElementById('prefix').value, collection:document.getElementById('collection').value })) } }
+async function deleteFirst(){ const rows = await list({ prefix:document.getElementById('prefix').value, collection:document.getElementById('collection').value }); if(!rows.length){ out('No rows to delete'); return } const id=rows[0].id; data = data.filter(r=>r.id!==id); const ok = await writeAll(); if(ok){ out('Deleted: '+id); renderRows(await list({ prefix:document.getElementById('prefix').value, collection:document.getElementById('collection').value })) } }
+document.getElementById('test').addEventListener('click', testConn)
+document.getElementById('check').addEventListener('click', checkWrite)
+document.getElementById('load').addEventListener('click', loadSnapshot)
+document.getElementById('create').addEventListener('click', create)
+document.getElementById('update').addEventListener('click', updateFirst)
+document.getElementById('delete').addEventListener('click', deleteFirst)
+document.getElementById('snippet').addEventListener('click', ()=>{
+  const writeUrl = normalizeUrl(document.getElementById('writeUrl').value);
+  const method = document.getElementById('writeMethod').value;
+  let headers = {};
+  try{ const raw=document.getElementById('headers').value; headers = raw? JSON.parse(raw):{} }catch(_){ headers={} }
+  const snap = normalizeUrl(document.getElementById('snapshot').value);
+  const baseHeaders = (function(){ const base={'Content-Type':'application/json'}; const use = document.getElementById('useDefaultAuth').checked; if(use && !headers.Authorization){ base.Authorization = 'Basic '+ btoa('admin:securepassword') } return Object.assign(base, headers) })();
+  function js(){ return `const writeUrl = ${JSON.stringify(writeUrl)}\nconst snapshotUrl = ${JSON.stringify(snap)}\nconst headers = ${JSON.stringify(baseHeaders, null, 2)}\nasync function read(){ const r = await fetch(writeUrl,{cache:'no-store', mode:'cors', credentials:'omit'}); const et = r.headers.get('etag'); const data = await r.json(); return { data, etag: et } }\nasync function head(){ const r = await fetch(writeUrl,{method:'HEAD', mode:'cors', credentials:'omit', headers}); return r.headers.get('etag') }\nasync function write(data, etag, method=${JSON.stringify(method)}){ const hdrs = Object.assign({}, headers, etag? {'If-Match': etag} : {}); const r = await fetch(writeUrl,{method, headers: hdrs, body: JSON.stringify(data,null,2), mode:'cors', credentials:'omit'}); if(!r.ok) throw new Error('write_failed'); return r.headers.get('etag') }\nasync function create(row){ const { data, etag } = await read(); data.push(row); const newEt = await write(data, etag); return newEt }\nasync function updateFirst(mutator){ const { data, etag } = await read(); if(!data.length) return null; mutator(data[0]); const newEt = await write(data, etag); return newEt }\nasync function deleteFirst(){ const { data, etag } = await read(); if(!data.length) return null; const id = data[0].id; const next = data.filter(r=>r.id!==id); const newEt = await write(next, etag); return { etag:newEt, deleted:id } }` }
+  function ts(){ return `type Row = { id:number; relid:number; prefix:string; collection:string; metakey:string; metavalue:any; createddate:string; updateddate:string }\ntype Snapshot = Row[]\nconst writeUrl: string = ${JSON.stringify(writeUrl)}\nconst snapshotUrl: string = ${JSON.stringify(snap)}\nconst headers: Record<string,string> = ${JSON.stringify(baseHeaders, null, 2)}\nasync function read(): Promise<{data:Snapshot, etag:string|null}>{ const r = await fetch(writeUrl,{ cache:'no-store', mode:'cors', credentials:'omit' }); const et = r.headers.get('etag'); const data = await r.json(); return { data, etag: et } }\nasync function head(): Promise<string|null>{ const r = await fetch(writeUrl,{ method:'HEAD', mode:'cors', credentials:'omit', headers }); return r.headers.get('etag') }\nasync function write(data:Snapshot, etag:string|null, method:${JSON.stringify(method)}| 'PUT' | 'POST'): Promise<string|null>{ const hdrs = Object.assign({}, headers, etag? {'If-Match': etag} : {}); const r = await fetch(writeUrl,{ method, headers: hdrs, body: JSON.stringify(data,null,2), mode:'cors', credentials:'omit' }); if(!r.ok) throw new Error('write_failed'); return r.headers.get('etag') }` }
+  function curl(){ const hdrs = Object.entries(baseHeaders).map(([k,v])=>`-H ${JSON.stringify(k+': '+v)}`).join(' '); return `# read\ncurl -s ${hdrs} ${JSON.stringify(writeUrl)}\n# head\ncurl -I ${hdrs} ${JSON.stringify(writeUrl)}\n# write (replace DATA.json and ETAG)\ncurl -X ${method} ${hdrs} -H "If-Match: ETAG" --data @DATA.json ${JSON.stringify(writeUrl)}` }
+  function php(){ return `<?php\n$writeUrl=${json(writeUrl)};\n$headers=${json(baseHeaders)};\nfunction request($url,$method='GET',$headers=[],$body=null){ $ch=curl_init($url); curl_setopt($ch,CURLOPT_CUSTOMREQUEST,$method); $hs=[]; foreach($headers as $k=>$v){ $hs[]="$k: $v"; } curl_setopt($ch,CURLOPT_HTTPHEADER,$hs); if($body!==null){ curl_setopt($ch,CURLOPT_POSTFIELDS,$body); } curl_setopt($ch,CURLOPT_RETURNTRANSFER,true); curl_setopt($ch,CURLOPT_HEADER,true); $resp=curl_exec($ch); $header_size=curl_getinfo($ch,CURLINFO_HEADER_SIZE); $header=substr($resp,0,$header_size); $body=substr($resp,$header_size); curl_close($ch); return [$header,$body]; }\nlist($h,$b)=request($writeUrl,'GET',$headers);\nlist($h2,$_)=request($writeUrl,'HEAD',$headers);\n// write example\n$etag='ETAG'; $hdrs=$headers; $hdrs['If-Match']=$etag; list($h3,$b3)=request($writeUrl,${json(method)},$hdrs,json_encode([]));\n?>` }
+  function python(){ return `import requests, json\nwrite_url=${JSON.stringify(writeUrl)}\nheaders=${JSON.stringify(baseHeaders)}\nr=requests.get(write_url,headers=headers)\netag=r.headers.get('ETag')\nr_head=requests.head(write_url,headers=headers)\nhdrs=dict(headers)\nhdrs['If-Match']=etag or ''\nresp=requests.request(${JSON.stringify(method)}, write_url, headers=hdrs, data=json.dumps([]))\nprint(resp.status_code)` }
+  function sdk(){ return `class CoreEngineDBClient{ constructor(writeUrl, headers){ this.writeUrl=writeUrl; this.headers=headers||{}; this.etag=null } async head(){ const r=await fetch(this.writeUrl,{ method:'HEAD', headers:this.headers, mode:'cors', credentials:'omit' }); this.etag=r.headers.get('etag'); return this.etag } async read(){ const r=await fetch(this.writeUrl,{ cache:'no-store', headers:this.headers, mode:'cors', credentials:'omit' }); this.etag=r.headers.get('etag'); const data=await r.json(); return { data, etag:this.etag } } async write(data, method){ const m=method||${JSON.stringify(method)}; const hdrs=Object.assign({}, this.headers, this.etag? { 'If-Match': this.etag } : {}); let r=await fetch(this.writeUrl,{ method:m, headers:hdrs, body:JSON.stringify(data,null,2), mode:'cors', credentials:'omit' }); if(r.status===412){ await this.head(); const hdrs2=Object.assign({}, this.headers, this.etag? { 'If-Match': this.etag } : {}); r=await fetch(this.writeUrl,{ method:m, headers:hdrs2, body:JSON.stringify(data,null,2), mode:'cors', credentials:'omit' }); } if(!r.ok) throw new Error('write_failed'); this.etag=r.headers.get('etag')||this.etag; return this.etag } }` }
+  function json(x){ return JSON.stringify(x) }
+  let active='sdk';
+  function render(){ const m={ js:js(), ts:ts(), curl:curl(), php:php(), python:python(), sdk:sdk() }; document.getElementById('snippetOut').textContent = m[active]; const steps = `1) GET/HEAD ${writeUrl}\n2) Keep ETag for writes\n3) PUT/POST full snapshot with If-Match\n4) Create/Update/Delete by modifying snapshot`; document.getElementById('howto').textContent = steps }
+  ['tab-js','tab-ts','tab-curl','tab-php','tab-python','tab-sdk'].forEach(id=>{ const b=document.getElementById(id); if(b){ b.onclick=()=>{ active=id.split('-')[1]; document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); render(); updateSnippetCM(); if(outCM){ try{ outCM.setOption('mode', outMode()) }catch(_){ } } } } })
+  const copyBtn = document.getElementById('copy'); if(copyBtn){ copyBtn.onclick=()=>{ const ta=document.getElementById('snippetOut'); const txt = snippetCM? snippetCM.getValue() : (ta? (ta.value||ta.textContent||'') : ''); navigator.clipboard && navigator.clipboard.writeText(txt) } }
+  render(); updateSnippetCM();
+})
+
+function mark(ok){ return ok? '✓' : '✗' }
+function setChecklist(items){ const el=document.getElementById('checklist'); el.textContent=''; el.innerHTML = items.map(i=>`<div>${mark(i.ok)} ${i.name} ${i.info? `<span class=\"muted\">${i.info}</span>`:''}</div>`).join('') }
+async function runChecklist(){ try{
+  const snap = normalizeUrl(document.getElementById('snapshot').value);
+  const wurl = normalizeUrl(document.getElementById('writeUrl').value);
+  const headers = getHeaders();
+  const items=[];
+  try{ const r = await fetch(snap,{cache:'no-store', mode:'cors', credentials:'omit'}); const et=r.headers.get('etag'); items.push({ name:'GET snapshot', ok:r.ok, info:(r.status+' '+(et? 'ETag '+et:'')) }); }catch(e){ items.push({ name:'GET snapshot', ok:false, info:String(e||'') }) }
+  try{ const r = await fetch(wurl,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); const et=r.headers.get('etag'); items.push({ name:'HEAD write', ok:r.ok, info:(r.status+' '+(et? 'ETag '+et:'')) }); }catch(e){ items.push({ name:'HEAD write', ok:false, info:String(e||'') }) }
+  let allowMethods=''; let allowHeaders=''; let allowOrigin='';
+  try{ const r = await fetch(wurl,{method:'OPTIONS', mode:'cors', credentials:'omit'}); allowMethods = r.headers.get('Access-Control-Allow-Methods')||''; allowHeaders = r.headers.get('Access-Control-Allow-Headers')||''; allowOrigin = r.headers.get('Access-Control-Allow-Origin')||''; const ok = /PUT/.test(allowMethods)||/POST/.test(allowMethods); const hdrOk = /Content-Type/.test(allowHeaders)&&/If-Match/.test(allowHeaders); const originOk = allowOrigin==='*' || !!allowOrigin; items.push({ name:'CORS methods', ok:ok, info:allowMethods }); items.push({ name:'CORS headers', ok:hdrOk, info:allowHeaders }); items.push({ name:'CORS origin', ok:originOk, info:allowOrigin }); }catch(e){ items.push({ name:'CORS check', ok:false, info:String(e||'') }) }
+  try{ const r = await fetch(wurl,{method:'GET', mode:'cors', credentials:'omit'}); const expose = r.headers.get('Access-Control-Expose-Headers')||''; const ok = /ETag/i.test(expose); items.push({ name:'Expose ETag', ok:ok, info:expose }); }catch(e){ items.push({ name:'Expose ETag', ok:false, info:String(e||'') }) }
+  try{ const hdrs = Object.assign({}, headers, { 'If-Match': 'invalid-etag' }); const r = await fetch(wurl,{method:'PUT', headers: hdrs, body: JSON.stringify([],null,2), mode:'cors', credentials:'omit'}); const ok = r.ok || r.status===412; items.push({ name:'Write path', ok:ok, info:String(r.status) }); }catch(e){ items.push({ name:'Write path', ok:false, info:String(e||'') }) }
+  setChecklist(items);
+}catch(e){ setChecklist([{ name:'Checklist error', ok:false, info:String(e||'') }]) } }
+document.getElementById('runChecklist').addEventListener('click', runChecklist)
+// Enhancements: SDK tab, badges, auto-retry, and improved handlers
+(function(){
+  function setEt(et){ var el=document.getElementById('etagOut'); if(el) el.value = et||'' }
+  function setWriteStatus(s){ var el=document.getElementById('writeOut'); if(el) el.value = s||'' }
+  function sdk(){
+    var writeUrl = normalizeUrl(document.getElementById('writeUrl').value);
+    var method = document.getElementById('writeMethod').value;
+    var headers = (function(){ try{ var raw=document.getElementById('headers').value; var h = raw? JSON.parse(raw):{}; return Object.assign({'Content-Type':'application/json'}, h) }catch(_){ return {'Content-Type':'application/json'} } })();
+    return 'class CoreEngineDBClient{\n  constructor(writeUrl, headers){ this.writeUrl=writeUrl; this.headers=headers||{}; this.etag=null }\n  async head(){ const r=await fetch(this.writeUrl,{ method:\'HEAD\', headers:this.headers, mode:\'cors\', credentials:\'omit\' }); this.etag=r.headers.get(\'etag\'); return this.etag }\n  async read(){ const r=await fetch(this.writeUrl,{ cache:\'no-store\', headers:this.headers, mode:\'cors\', credentials:\'omit\' }); this.etag=r.headers.get(\'etag\'); const data=await r.json(); return { data, etag:this.etag } }\n  async write(data, method){ const m=method||'+JSON.stringify(method)+'; const hdrs=Object.assign({}, this.headers, this.etag? { \"If-Match\": this.etag } : {}); let r=await fetch(this.writeUrl,{ method:m, headers:hdrs, body:JSON.stringify(data,null,2), mode:\'cors\', credentials:\'omit\' }); if(r.status===412){ await this.head(); const hdrs2=Object.assign({}, this.headers, this.etag? { \"If-Match\": this.etag } : {}); r=await fetch(this.writeUrl,{ method:m, headers:hdrs2, body:JSON.stringify(data,null,2), mode:\'cors\', credentials:\'omit\' }); } if(!r.ok) throw new Error(\'write_failed\'); this.etag=r.headers.get(\'etag\')||this.etag; return this.etag }\n}\nconst client = new CoreEngineDBClient('+JSON.stringify(writeUrl)+', '+JSON.stringify(headers, null, 2)+');';
+  }
+  // Add SDK tab button
+  var tabs = document.querySelector('.tabs');
+  if(tabs && !document.getElementById('tab-sdk')){
+    var sdkBtn = document.createElement('button'); sdkBtn.id='tab-sdk'; sdkBtn.textContent='SDK'; tabs.insertBefore(sdkBtn, document.getElementById('copy'));
+  }
+  // Add badges and retry controls row
+  var howto = document.getElementById('howto');
+  if(howto){
+    var row = document.createElement('div'); row.className='row';
+    row.innerHTML = '<label><input type="checkbox" id="autoRetry" checked> Auto-retry on 412</label>\n<input id="maxRetries" value="1" placeholder="Max retries">\n<div style="flex:1"></div>\n<div><div class="muted">Current ETag</div><input id="etagOut" readonly></div>\n<div><div class="muted">Last Write Status</div><input id="writeOut" readonly></div>';
+    howto.insertAdjacentElement('afterend', row);
+  }
+  // Override functions to update badges and add retry
+  window.testConn = async function(){ try{ var snap = normalizeUrl(document.getElementById('snapshot').value); var r = await fetch(snap,{cache:'no-store', mode:'cors', credentials:'omit'}); if(!r.ok){ out('Snapshot GET failed: '+r.status); return } var et = r.headers.get('etag'); if(et) etag=et; setEt(etag); out('Snapshot OK'+(etag? ' ETag='+etag:'')) }catch(e){ out('Connection error: '+String(e||'')) } }
+  window.checkWrite = async function(){ try{ var url=normalizeUrl(document.getElementById('writeUrl').value); var headers=getHeaders(); var r = await fetch(url,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); var et=r.headers.get('etag'); if(et) etag=et; setEt(etag); out('Write HEAD '+(r.ok?'OK ':'ERR ')+r.status+' ETag='+(et||'')); }catch(e){ out('HEAD error: '+String(e||'')) } }
+  window.loadSnapshot = async function(){ try{ var snap = normalizeUrl(document.getElementById('snapshot').value); var r = await fetch(snap,{cache:'no-store', mode:'cors', credentials:'omit'}); if(!r.ok){ out('Load failed: '+r.status); return } etag = r.headers.get('etag'); setEt(etag); var t = await r.text(); try{ data = JSON.parse(t) }catch(_){ data=[] } renderRows(await list({ prefix:document.getElementById('prefix').value, collection:document.getElementById('collection').value })) ; out('Loaded '+data.length+' records') }catch(e){ out('Error: '+String(e||'')) } }
+  window.writeAll = async function(){ var url=normalizeUrl(document.getElementById('writeUrl').value); var method=document.getElementById('writeMethod').value; var headers=getHeaders(); var retries = parseInt((document.getElementById('maxRetries')&&document.getElementById('maxRetries').value)||'0',10)||0; var auto = !!(document.getElementById('autoRetry')&&document.getElementById('autoRetry').checked); async function attempt(){ var hdrs = etag? Object.assign({}, headers, {'If-Match': etag}) : headers; return fetch(url,{method, headers: hdrs, body: JSON.stringify(data,null,2), mode:'cors', credentials:'omit'}) } var r = await attempt(); var tries=0; while(auto && r.status===412 && tries<retries){ var rh = await fetch(url,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); var et = rh.headers.get('etag'); if(et) etag=et; setEt(etag); r = await attempt(); tries++; } if(!r.ok){ setWriteStatus(String(r.status)); out('Write failed: '+r.status); return false } var newEt = r.headers.get('etag'); if(newEt) etag=newEt; setEt(etag); setWriteStatus('200'); return true }
+  window.runChecklist = async function(){ try{
+    var snap = normalizeUrl(document.getElementById('snapshot').value);
+    var wurl = normalizeUrl(document.getElementById('writeUrl').value);
+    var headers = getHeaders();
+    var items=[];
+    try{ var t0=performance.now(); var r = await fetch(snap,{cache:'no-store', mode:'cors', credentials:'omit'}); var t1=performance.now(); var et=r.headers.get('etag'); var text=await r.clone().text(); var size=(new TextEncoder()).encode(text).length; items.push({ name:'GET snapshot', ok:r.ok, info:(r.status+' '+(et? 'ETag '+et+' ':'')+'lat '+Math.round(t1-t0)+'ms size '+size+'B') }); }catch(e){ items.push({ name:'GET snapshot', ok:false, info:String(e||'') }) }
+    try{ var t0h=performance.now(); var rh = await fetch(wurl,{method:'HEAD', headers, mode:'cors', credentials:'omit'}); var t1h=performance.now(); var eth=rh.headers.get('etag'); var clen=rh.headers.get('Content-Length')||''; items.push({ name:'HEAD write', ok:rh.ok, info:(rh.status+' '+(eth? 'ETag '+eth+' ':'')+'lat '+Math.round(t1h-t0h)+'ms size '+(clen||'-')) }); }catch(e){ items.push({ name:'HEAD write', ok:false, info:String(e||'') }) }
+    var allowMethods=''; var allowHeaders=''; var allowOrigin='';
+    try{ var ro = await fetch(wurl,{method:'OPTIONS', mode:'cors', credentials:'omit'}); allowMethods = ro.headers.get('Access-Control-Allow-Methods')||''; allowHeaders = ro.headers.get('Access-Control-Allow-Headers')||''; allowOrigin = ro.headers.get('Access-Control-Allow-Origin')||''; var okm = /PUT/.test(allowMethods)||/POST/.test(allowMethods); var okh = /Content-Type/.test(allowHeaders)&&/If-Match/.test(allowHeaders); var oko = allowOrigin==='*' || !!allowOrigin; items.push({ name:'CORS methods', ok:okm, info:allowMethods }); items.push({ name:'CORS headers', ok:okh, info:allowHeaders }); items.push({ name:'CORS origin', ok:oko, info:allowOrigin }); }catch(e){ items.push({ name:'CORS check', ok:false, info:String(e||'') }) }
+    try{ var rg = await fetch(wurl,{method:'GET', mode:'cors', credentials:'omit'}); var expose = rg.headers.get('Access-Control-Expose-Headers')||''; var okx = /ETag/i.test(expose); items.push({ name:'Expose ETag', ok:okx, info:expose }); }catch(e){ items.push({ name:'Expose ETag', ok:false, info:String(e||'') }) }
+    try{ var hdrs = Object.assign({}, headers, { 'If-Match': 'invalid-etag' }); var tw0=performance.now(); var rw = await fetch(wurl,{method:'PUT', headers: hdrs, body: JSON.stringify([],null,2), mode:'cors', credentials:'omit'}); var tw1=performance.now(); var okw = rw.ok || rw.status===412; items.push({ name:'Write path', ok:okw, info:String(rw.status)+' lat '+Math.round(tw1-tw0)+'ms' }); }catch(e){ items.push({ name:'Write path', ok:false, info:String(e||'') }) }
+    setChecklist(items);
+  }catch(e){ setChecklist([{ name:'Checklist error', ok:false, info:String(e||'') }]) } }
+  // Hook SDK tab click
+  var activeTabs=['tab-js','tab-ts','tab-curl','tab-php','tab-python','tab-sdk'];
+  activeTabs.forEach(function(id){ var b=document.getElementById(id); if(b){ b.onclick=function(){ active=id.split('-')[1]; document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('active') }); b.classList.add('active'); var m={ js:js(), ts:ts(), curl:curl(), php:php(), python:python(), sdk:sdk() }; document.getElementById('snippetOut').textContent = m[active]; var writeUrl = normalizeUrl(document.getElementById('writeUrl').value); document.getElementById('howto').textContent = '1) GET/HEAD '+writeUrl+'\n2) Keep ETag for writes\n3) PUT/POST full snapshot with If-Match\n4) Create/Update/Delete by modifying snapshot'; } } });
+})();
+</script>
+</body>
+</html>

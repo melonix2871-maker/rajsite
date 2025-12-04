@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreEngineDB Client SDK Demo</title>
+<style>
+  body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#0a0a0a;color:#111;margin:0}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:20px;border:1px solid #e6e6e6}
+  h1{margin:0 0 16px;color:#000;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  input,select,textarea{padding:10px;border:1px solid #d9d9d9;border-radius:8px;background:#fff;color:#000;max-width:100%;width:100%;box-sizing:border-box}
+  button{background:#000;border:1px solid #000;color:#fff;padding:10px 16px;border-radius:8px;cursor:pointer}
+  pre{background:#f7f7f7;border:1px solid #e6e6e6;border-radius:8px;padding:12px;overflow:auto}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+  .muted{color:#666;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  th{background:#f5f5f5;color:#000}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>CoreEngineDB Client SDK Demo</h1>
+    <div class="grid">
+      <div>
+        <div class="muted">Adapter</div>
+        <select id="adapter"><option value="localStorage">localStorage</option><option value="http">http</option></select>
+      </div>
+      <div>
+        <div class="muted">HTTP URL (for http adapter)</div>
+        <input id="http-url" value="/json/db.json">
+      </div>
+      <div>
+        <div class="muted">Prefix</div>
+        <input id="prefix" value="app_">
+      </div>
+      <div>
+        <div class="muted">Collection</div>
+        <input id="collection" value="users">
+      </div>
+      <div>
+        <div class="muted">Metakey</div>
+        <input id="metakey" value="display_name">
+      </div>
+      <div style="grid-column:1/-1">
+        <div class="muted">Metavalue (JSON or text)</div>
+        <textarea id="metavalue" rows="4">{"name":"Sample User"}</textarea>
+      </div>
+    </div>
+    <div class="row">
+      <button id="list">List</button>
+      <button id="create">Create</button>
+      <button id="update">Update First</button>
+      <button id="delete">Delete First</button>
+      <button id="reset">Reset Demo Data</button>
+    </div>
+    <div class="muted">Results</div>
+    <pre id="out"></pre>
+    <div class="muted">Records</div>
+    <table>
+      <thead><tr><th>ID</th><th>prefix</th><th>relid</th><th>collection</th><th>metakey</th><th>metavalue</th><th>updated</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Code Snippets</h2>
+    <pre>
+// Init
+const client = await CoreEngineDBClient.init({ adapter:'localStorage' })
+// List
+const users = await client.list({ prefix:'app_', collection:'users' })
+// Create
+await client.create({ prefix:'app_', collection:'users', metakey:'email', metavalue:{ value:'u@example.com' } })
+// Update
+await client.update(1, { metavalue:{ value:'new' } })
+// Delete
+await client.remove(1)
+    </pre>
+  </div>
+</div>
+<script>
+class HttpAdapter{
+  constructor(opts){ this.url=opts.url||'/json/db.json'; this.method=opts.method||'PUT'; this.headers=opts.headers||{} }
+  async read(){ const r = await fetch(this.url,{cache:'no-store'}); if(!r.ok) return []; try{ return await r.json() }catch(_){ return [] } }
+  async write(data){ const r = await fetch(this.url,{method:this.method,headers:Object.assign({'Content-Type':'application/json'},this.headers),body:JSON.stringify(data,null,2)}); if(!r.ok) throw new Error('write_failed'); return true }
+}
+class LocalStorageAdapter{ constructor(key){ this.key=key||'coreenginedb' } async read(){ const t=localStorage.getItem(this.key); if(!t) return []; try{ return JSON.parse(t) }catch(_){ return [] } } async write(data){ localStorage.setItem(this.key, JSON.stringify(data)); return true } }
+class CoreEngineDBClient{
+  static async init(cfg){ const adapter = cfg.adapter==='http'? new HttpAdapter({url:cfg.httpUrl}) : new LocalStorageAdapter('coreenginedb'); const c = new CoreEngineDBClient(adapter); await c.load(); return c }
+  constructor(adapter){ this.adapter=adapter; this.data=[] }
+  async load(){ const raw = await this.adapter.read(); this.data = Array.isArray(raw)?raw:[]; this.migrate() }
+  migrate(){ const byKey={}; this.data.forEach(r=>{ if(!r.prefix) r.prefix='app_'; const k=r.prefix+':'+(r.collection||''); if(!byKey[k]) byKey[k]=0; if(!r.relid){ byKey[k]++; r.relid=byKey[k] } else { byKey[k]=Math.max(byKey[k], Number(r.relid)||0) } }) }
+  nextId(){ return (this.data.reduce((m,r)=>Math.max(m,Number(r.id)||0),0)||0)+1 }
+  nextRelid(prefix,collection){ const a=this.data.filter(r=>r.prefix===prefix && r.collection===collection); return a.reduce((m,r)=>Math.max(m,Number(r.relid)||0),0)+1 }
+  async list(filter){ let a=this.data.slice(); if(filter){ if(filter.prefix) a=a.filter(r=>r.prefix===filter.prefix); if(filter.collection) a=a.filter(r=>r.collection===filter.collection) } return a }
+  async create({prefix,collection,metakey,metavalue}){ const id=this.nextId(); const relid=this.nextRelid(prefix,collection); const now=new Date().toISOString(); const row={ id, relid, prefix, collection, metakey:metakey||'', metavalue:metavalue||'', createddate:now, updateddate:now }; this.data.push(row); await this.adapter.write(this.data); return row }
+  async update(id, patch){ const row=this.data.find(r=>r.id===Number(id)); if(!row) throw new Error('not_found'); Object.assign(row, patch); row.updateddate=new Date().toISOString(); await this.adapter.write(this.data); return row }
+  async remove(id){ const n=Number(id); this.data=this.data.filter(r=>r.id!==n); await this.adapter.write(this.data); return true }
+}
+function out(txt){ document.getElementById('out').textContent = typeof txt==='string'? txt : JSON.stringify(txt,null,2) }
+function renderRows(rows){ const tbody=document.getElementById('rows'); tbody.innerHTML = rows.map(r=>`<tr><td>${r.id}</td><td>${r.prefix}</td><td>${r.relid}</td><td>${r.collection}</td><td>${r.metakey}</td><td>${typeof r.metavalue==='object'? JSON.stringify(r.metavalue): r.metavalue}</td><td>${r.updateddate||''}</td></tr>`).join('') }
+(async function(){
+  let client = await CoreEngineDBClient.init({ adapter: document.getElementById('adapter').value, httpUrl: document.getElementById('http-url').value })
+  async function refreshClient(){ client = await CoreEngineDBClient.init({ adapter: document.getElementById('adapter').value, httpUrl: document.getElementById('http-url').value }) }
+  document.getElementById('adapter').addEventListener('change', refreshClient)
+  document.getElementById('http-url').addEventListener('change', refreshClient)
+  document.getElementById('list').addEventListener('click', async ()=>{ const rows = await client.list({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value }); out(rows); renderRows(rows) })
+  document.getElementById('create').addEventListener('click', async ()=>{ let mv=document.getElementById('metavalue').value; try{ mv = JSON.parse(mv) }catch(_){ } const row = await client.create({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value, metakey: document.getElementById('metakey').value, metavalue: mv }); out(row); const rows = await client.list({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value }); renderRows(rows) })
+  document.getElementById('update').addEventListener('click', async ()=>{ const rows = await client.list({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value }); if(!rows.length){ out('No rows to update'); return } const row = await client.update(rows[0].id, { metavalue: { updated:true } }); out(row); renderRows(await client.list({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value })) })
+  document.getElementById('delete').addEventListener('click', async ()=>{ const rows = await client.list({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value }); if(!rows.length){ out('No rows to delete'); return } await client.remove(rows[0].id); out('Deleted: '+rows[0].id); renderRows(await client.list({ prefix: document.getElementById('prefix').value, collection: document.getElementById('collection').value })) })
+  document.getElementById('reset').addEventListener('click', async ()=>{ const demo=[{id:1,relid:1001,prefix:'app_',collection:'users',metakey:'display_name',metavalue:'Demo User',createddate:new Date().toISOString(),updateddate:new Date().toISOString()}]; await client.adapter.write(demo); await refreshClient(); const rows = await client.list({ prefix:'app_', collection:'users' }); out('Reset complete'); renderRows(rows) })
+  const rows = await client.list({ prefix:'app_', collection:'users' }); renderRows(rows)
+})()
+</script>
+</body>
+</html>

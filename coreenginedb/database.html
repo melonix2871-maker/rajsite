@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="icon.png" />
+
+  <title>CoreEngineDB</title>
+  <style>
+    body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#fff;color:#111;margin:0}
+    .wrap{width:100%; padding-bottom: 60px;}
+    .card{background:#fff;;padding:20px;}
+    h1{margin:0 0 16px;color:#000;font-weight:600}
+    .toolbar{display:flex;gap:12px;margin-bottom:16px}
+    #pagination{margin-top: 16px;}
+    input,select,textarea{padding:10px;border:1px solid #d9d9d9;border-radius:8px;background:#fff;color:#000;max-width:100%;width:100%;box-sizing:border-box}
+    button{background:#000;border:1px solid #000;color:#fff;padding:10px 16px;border-radius:8px;cursor:pointer}
+    button.secondary{background:#333;border-color:#333}
+    button.danger{background:#222;border-color:#222}
+    button.success{background:#000;border-color:#000}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    th,td{padding:10px;border-bottom:1px solid #ededed;text-align:left}
+    th{background:#f5f5f5;color:#000}
+    tr:hover{background:#fafafa}
+    .actions{display:flex;gap:8px}
+    .muted{color:#666;font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+    .hidden{display:none}
+    .statusbar{display:flex;gap:16px;align-items:center;padding:8px 0;border-top:1px solid #eee;color:#000}
+    .badge{display:inline-block;padding:4px 8px;border:1px solid #000;border-radius:999px;font-size:12px}
+    .modal{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:1000}
+    .modal .panel{background:#fff;border:1px solid #e6e6e6;border-radius:12px;max-width:900px;width:90%;padding:20px}
+    .panel h2{margin-top:0;color:#000}
+    textarea{min-height:180px}
+    .footer{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e6e6e6;padding:10px 16px;box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+    .footer .row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+    .footer .row .section{display:flex;gap:8px;align-items:center}
+    .footer .section .title{font-weight:600;color:#000}
+    .footer .tools button{padding:8px 12px}
+    #footer-conflict{margin-top:10px;border-top:1px solid #eee;padding-top:10px}
+    #footer-conflict.hidden{display:none}
+    .drawer{position:fixed;top:0;left:0;bottom:0;width:360px;background:#fff;border-right:1px solid #e6e6e6;box-shadow:6px 0 20px rgba(0,0,0,.08);transform:translateX(-100%);transition:transform .25s ease;z-index:20;padding:16px}
+    .drawer.open{transform:translateX(0)}
+    .drawer .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .icon{width:16px;height:16px;fill:#fff}
+    td{word-break:break-word;overflow-wrap:anywhere}
+    td .cell{max-width:160px}
+    .brand{display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:12px}
+    .brand-title{font-size:28px;font-weight:700;color:#000}
+    .brand-sub{font-size:12px;color:#666}
+    .notice{margin-top:8px;padding:8px 10px;border:1px solid;border-radius:8px}
+    .notice-success{border-color:#000;color:#000}
+    .notice-error{border-color:#cc0000;color:#cc0000}
+    .CodeMirror{border:1px solid #d9d9d9;border-radius:8px;min-height:180px}
+    .editor-invalid .CodeMirror{border-color:#cc0000}
+    .field{position:relative}
+    .toggle-eye{position:absolute;right:8px;top:28px;background:#000;border:1px solid #000;color:#fff;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    #form .CodeMirror{height: 200px !important;}
+    #heading-area{display: flex; justify-content: space-between; align-items: center;}
+    #pagination button[style="font-weight:bold"]{background:#ccc;border-color:#000; color: #000;}
+ </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div id="heading-area">
+      <h1 style="display: flex; align-items: center; gap: 8px; font-size:24px;"><img src="logo.png" alt="CoreEngineDB" width="180"><span>Admin</span></h1>  
+      <div id="heading-tools" class="toolbar">
+        <button id="refresh" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-refresh-ccw"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg></button>
+        <button id="new" class="secondary" title="New Record">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+        <button id="export" class="secondary" title="Export">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+        <input id="import-file" type="file" accept="application/json" style="display:none">
+        <button id="import" class="secondary" title="Import">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
+        <button id="settings" class="secondary" title="Settings">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sliders"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></button>
+        <button id="activity" class="secondary" title="Activity">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-activity"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></button>
+        <button id="apikeys" class="secondary" title="API Keys">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-key"><path d="M21 2l-2 2"></path><circle cx="7" cy="14" r="3"></circle><path d="M7 11v-3"></path><path d="M21 2l-6 6"></path><path d="M15 8l-2 2"></path></svg></button>
+      </div>
+      </div>  
+      <div class="toolbar">
+        <select id="filter-collection"><option value="">All collections</option></select>
+        <select id="filter-prefix"><option value="">All prefixes</option></select>
+        <input id="filter-key" placeholder="Filter by metakey">
+        <input id="filter-value" placeholder="Filter by metavalue">
+        <select id="page-size"><option>10</option><option>20</option><option>50</option><option>100</option></select>        
+      </div>     
+      <div id="status" class="statusbar"></div>
+      <div id="drawer-tabs" class="toolbar" style="border-bottom:1px solid #eee"></div>
+      <div id="app-msg" class="notice" style="display:none"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>prefix</th><th>relid</th><th>collection</th><th>metakey</th><th>metavalue</th><th>created</th><th>updated</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="pagination" class="toolbar"></div>
+      <div id="form" class="drawer hidden">
+        <div class="header">
+          <h2 id="form-title">Create Record</h2>
+          <button id="drawer-close" class="danger" title="Close">
+            
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="grid">
+          <div>
+            <div class="muted">prefix</div>
+            <input id="f-prefix">
+          </div>
+          <div>
+            <div class="muted">relid</div>
+            <input id="f-relid" type="number">
+          </div>
+          <div>
+            <div class="muted">collection</div>
+            <input id="f-collection">
+          </div>
+          <div>
+            <div class="muted">metakey</div>
+            <input id="f-metakey">
+          </div>
+          <div>
+            <div class="muted">metavalue</div>
+            <textarea id="f-metavalue"></textarea>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <button id="save" class="success" title="Save">
+            
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-save"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          </button>
+          <button id="cancel" class="danger" title="Cancel">
+            
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="login" class="modal hidden">
+    <div class="panel" style="max-width:420px">
+      <div class="brand">
+        <div class="brand-title"><img width="240" src="./logo.png" alt="CoreEngineDB"></div>      
+      </div>
+      <div id="login-msg" class="notice" style="display:none"></div>
+      <div class="grid">
+        <div>
+          <div class="muted" style="font-size:14px; margin-bottom: 8px;">Username</div>
+          <input id="login-username" autocomplete="username" value="admin">
+        </div>
+        <div class="field">
+          <div class="muted" style="font-size:14px; margin-bottom: 8px;">Password</div>
+          <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••">
+          <button id="login-toggle" class="toggle-eye" title="Show/Hide Password" style="border: none;background: transparent; color:#111;">
+            <img src="./eye.svg" alt="Show/Hide Password" width="18">
+          </button>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:12px">
+        <button id="login-submit" class="success" title="Login" style="font-weight:bold;">LOGIN</button>
+      </div>
+    </div>
+  </div>
+  <div id="settings-drawer" class="drawer hidden">
+    <div class="header">
+      <h2>Settings</h2>
+      <button id="settings-close" class="danger" title="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="grid">
+      <div>
+        <div class="muted">Snapshot URL</div>
+        <input id="set-snapshot" placeholder="https://example.com/db.json">
+      </div>
+      <div>
+        <div class="muted">Write URL</div>
+        <input id="set-write-url" placeholder="https://example.com/db.json">
+      </div>
+      <div>
+        <div class="muted">Write Method</div>
+        <select id="set-write-method"><option>PUT</option><option>POST</option></select>
+      </div>
+      <div style="grid-column:1/-1">
+        <div class="muted">Headers (JSON)</div>
+        <textarea id="set-headers" placeholder="{\"Authorization\":\"Bearer ...\"}"></textarea>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:12px">
+      <button id="set-test" class="secondary">Test Connection</button>
+      <button id="set-save" class="success">Save</button>
+      <button id="set-reset" class="secondary">Reset</button>
+      <button id="set-close" class="danger">Close</button>
+    </div>
+    <div id="set-msg" class="notice" style="display:none"></div>
+  </div>
+  <div id="activity-drawer" class="drawer hidden" style="overflow-y:auto">
+    <div class="header">
+      <h2>Activity</h2>
+      <button id="activity-close" class="danger" title="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="toolbar" style="margin-bottom:8px">
+      <button id="activity-refresh" class="secondary">Refresh Activity</button>
+    </div>
+    <div id="activity-list"></div>
+  </div>
+  <div id="apikeys-drawer" class="drawer hidden" style="overflow-y:auto">
+    <div class="header">
+      <h2>API Keys</h2>
+      <button id="apikeys-close" class="danger" title="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="toolbar" style="margin-bottom:8px">
+      <button id="apikey-create" class="success">Create API Key</button>
+    </div>
+    <div id="apikeys-list"></div>
+  </div>
+  <div id="footer" class="footer">
+    <div class="row">
+      <div class="section">
+        <span class="title">Data</span>
+        <span id="footer-total" class="badge">Total: 0</span>
+        <span id="footer-collections" class="badge">Collections: 0</span>
+        <span id="footer-prefixes" class="badge">Prefixes: 0</span>
+      </div>
+      <div class="section">
+        <span class="title">Health</span>
+        <span id="footer-pending" class="badge">Pending: No</span>
+        <span id="footer-lock" class="badge">Lock: None</span>
+        <span id="footer-last" class="badge">Last Flush: —</span>
+        <span id="footer-selftest" class="badge">SelfTest: disabled</span>
+      </div>
+      <div class="section tools">
+        <button id="footer-seed" class="secondary">Seed Demo Data</button>
+        <button id="footer-selftest-run" class="secondary">Run Self-Test</button>
+        <button id="footer-flush" class="secondary">Force Flush</button>
+        <button id="footer-conflict-open" class="secondary">Open Conflict Panel</button>
+        <button id="footer-restore" class="secondary">Restore Backup</button>
+        <button id="footer-logout" class="secondary">Logout</button>
+      </div>
+    </div>
+    <div id="footer-conflict" class="hidden">
+      <div class="grid">
+        <div>
+          <div class="muted">Remote</div>
+          <textarea id="footer-remote"></textarea>
+        </div>
+        <div>
+          <div class="muted">Local (pending)</div>
+          <textarea id="footer-local"></textarea>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:8px">
+        <button id="footer-use-local" class="success">Use Local</button>
+        <button id="footer-use-remote" class="secondary">Use Remote</button>
+        <button id="footer-merge" class="secondary">Merge</button>
+        <button id="footer-close" class="danger" style="display: flex; gap: 5px; align-items: center;">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Close</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    let config={}
+    async function loadConfig(){
+      try{ const r = await fetch('/json/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
+      if(!config.defaultPrefix) config.defaultPrefix = 'app_'
+      if(!config.adapter) config.adapter = 'localStorage'
+      if(!config.http) config.http = { url: '/json/db.json', method: 'PUT' }
+    }
+
+    class HttpAdapter{
+      constructor(opts){ this.url = opts.url||'/json/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
+      async read(){ 
+        const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); const a = (config&&config.auth)||{}; if(a.enabled && !base.Authorization){ base.Authorization = 'Basic '+ btoa('admin:securepassword') } return base }).call(this)
+        const r = await fetch(this.url,{
+          cache:'no-store',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: ah
+        }); 
+        if(!r.ok) return []; 
+        const et = r.headers.get('etag'); 
+        if(et) localStorage.setItem('cedb_etag', et); 
+        const t = await r.text(); 
+        try{ return JSON.parse(t) }catch(_){ return [] } 
+      }
+      async write(data, opts){ 
+        const body = JSON.stringify(data,null,2); 
+        const et = localStorage.getItem('cedb_etag')||''; 
+        const hdrs = Object.assign({
+          'Content-Type':'application/json'
+        }, this.headers, et? {'If-Match': et} : {}, (opts&&opts.allowEmpty)? {'X-Allow-Empty-Write':'true'} : {}); 
+        if((config&&config.auth&&config.auth.enabled) && !hdrs.Authorization){ hdrs.Authorization = 'Basic '+ btoa('admin:securepassword') }
+        const r = await fetch(this.url,{
+          method: this.method,
+          headers: hdrs,
+          body,
+          mode: 'cors',
+          credentials: 'omit'
+        }); 
+        if(r.status===412) throw new Error('precondition_failed'); 
+        if(!r.ok) throw new Error('write_failed'); 
+        const newEt = r.headers.get('etag'); 
+        if(newEt) localStorage.setItem('cedb_etag', newEt); 
+        return true 
+      }
+    }
+
+    class LocalStorageAdapter{
+      constructor(key){ this.key = key||'coreenginedb' }
+      async read(){ const t = localStorage.getItem(this.key); if(!t) return []; try{ return JSON.parse(t) }catch(_){ return [] } }
+      async write(data){ localStorage.setItem(this.key, JSON.stringify(data)); return true }
+    }
+
+    class IndexedDBAdapter{
+      constructor(name){ this.name = name||'coreenginedb'; this.store = 'records' }
+      async open(){ return new Promise((res,rej)=>{ const r = indexedDB.open(this.name,1); r.onupgradeneeded = ()=>{ const db=r.result; if(!db.objectStoreNames.contains(this.store)) db.createObjectStore(this.store,{ keyPath:'id' }) }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error) }) }
+      async read(){ const db = await this.open(); return new Promise((res,rej)=>{ const tx = db.transaction(this.store,'readonly'); const st = tx.objectStore(this.store); const req = st.getAll(); req.onsuccess=()=>{ res(Array.isArray(req.result)?req.result:[]) }; req.onerror=()=>rej(req.error) }) }
+      async write(data){ const db = await this.open(); return new Promise((res,rej)=>{ const tx = db.transaction(this.store,'readwrite'); const st = tx.objectStore(this.store); const clr = st.clear(); clr.onsuccess=()=>{ try{ (Array.isArray(data)?data:[]).forEach(row=>st.put(row)) }catch(e){ } }; clr.onerror=()=>rej(clr.error); tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error) }) }
+    }
+
+    function sha256(str){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(buf=>{ const a=new Uint8Array(buf); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }) }
+    function hasSubtle(){ return typeof crypto!=='undefined' && crypto.subtle && typeof crypto.subtle.digest==='function' }
+    async function simpleHash(password, salt){ return sha256(password+':'+salt) }
+    async function pbkdf2(password, salt, iterations, length=32){
+      const enc = new TextEncoder()
+      const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits'])
+      const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: enc.encode(salt), iterations }, keyMaterial, length*8)
+      const bytes = new Uint8Array(bits)
+      return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('')
+    }
+    function randomToken(n=32){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
+
+    const tabId = (()=>{ const k='cedb_tab'; let v = sessionStorage.getItem(k); if(!v){ v = Math.random().toString(36).slice(2); sessionStorage.setItem(k,v) } return v })()
+    const channel = new BroadcastChannel('cedb_channel')
+    let editorMetavalue=null, editorRemote=null, editorLocal=null
+    let connStatus = 'unknown'
+    function makeEditor(textareaId){
+      const ta = document.getElementById(textareaId); if(!ta) return null
+      if(!window.CodeMirror) return null
+      const cm = CodeMirror.fromTextArea(ta,{ lineNumbers:true, mode:{name:'javascript', json:true}, viewportMargin:Infinity })
+      cm.on('change', ()=>validateEditor(cm))
+      return cm
+    }
+    function validateEditor(cm){
+      let ok=true; try{ const v = cm.getValue(); if(v.trim().length){ JSON.parse(v) } }catch(_){ ok=false }
+      const wrapper = cm.getWrapperElement()
+      if(ok) wrapper.classList.remove('editor-invalid'); else wrapper.classList.add('editor-invalid')
+    }
+
+    class WriteQueue{
+      constructor(db){ this.db=db; this.pending=null; this.timer=null; this.attempts=0; const wq=config.writeQueue||{}; this.min=wq.intervalMin||3000; this.max=wq.intervalMax||5000; this.lockTtl=15000; this.maxAttempts=5 }
+      pushSnapshot(data){ this.pending = JSON.stringify(data); localStorage.setItem('cedb_queue', this.pending); this.schedule() }
+      schedule(){ if(this.timer) return; const delay = Math.floor(this.min + Math.random()*(this.max-this.min)); this.timer = setTimeout(()=>{ this.timer=null; this.flush() }, delay) }
+      async flush(){ if(!this.pending) return; if(!this.acquireLock()) { this.schedule(); return }
+        processes.flush=true; updateRefreshButton()
+        try{
+          const prev = await this.db.adapter.read(); localStorage.setItem('cedb_backup', JSON.stringify(prev))
+          const target = JSON.parse(this.pending)
+          const sumBefore = await sha256(JSON.stringify(target))
+          const allowEmpty = Array.isArray(prev) && prev.length>0 && Array.isArray(target) && target.length===0
+          await this.db.adapter.write(target, { allowEmpty })
+          const after = await this.db.adapter.read(); const sumAfter = await sha256(JSON.stringify(after))
+          if(sumBefore!==sumAfter) throw new Error('checksum_mismatch')
+          this.pending=null; localStorage.removeItem('cedb_queue'); this.attempts=0; this.releaseLock(); this.lastFlushAt=Date.now(); channel.postMessage({type:'flushed'})
+          processes.flush=false; updateRefreshButton()
+        } catch(err){ this.releaseLock(); this.attempts++; try{ const payload = { error: (err&&err.message)||String(err||'error'), pending: this.pending?JSON.parse(this.pending):[] }; localStorage.setItem('cedb_conflict', JSON.stringify(payload)); }catch(_){ } channel.postMessage({type:'conflict'}); if(this.attempts>=this.maxAttempts) { this.attempts=0 } this.schedule(); processes.flush=false; updateRefreshButton() }
+      }
+      acquireLock(){ const k='cedb_lock'; const now=Date.now(); const raw = localStorage.getItem(k); let cur=null; try{ cur = raw?JSON.parse(raw):null }catch(_){ cur=null }
+        if(cur && cur.owner && cur.expiresAt && cur.expiresAt>now && cur.owner!==tabId) return false
+        localStorage.setItem(k, JSON.stringify({owner:tabId, expiresAt: now + this.lockTtl}))
+        return true
+      }
+      releaseLock(){ const k='cedb_lock'; const raw = localStorage.getItem(k); let cur=null; try{ cur = raw?JSON.parse(raw):null }catch(_){ cur=null }
+        if(cur && cur.owner===tabId) localStorage.removeItem(k)
+      }
+      loadPending(){ const t = localStorage.getItem('cedb_queue'); if(t){ this.pending=t; this.schedule() } }
+    }
+
+    class DB{
+      constructor(adapter){ this.adapter=adapter; this.data=[] }
+      async load(){ const raw = await this.adapter.read(); this.data = Array.isArray(raw)?raw:[]; this.migrate(); return this.data }
+      migrate(){
+        const byKey = {}
+        this.data.forEach(r=>{
+          if(!r.prefix) r.prefix = config.defaultPrefix
+          if(typeof r.metavalue==='string'){ try{ r.metavalue = JSON.parse(r.metavalue) }catch(_){ } }
+          const k = r.prefix+':'+(r.collection||'')
+          if(!byKey[k]) byKey[k]=0
+          if(!r.relid){ byKey[k]++; r.relid = byKey[k] } else { byKey[k] = Math.max(byKey[k], Number(r.relid)||0) }
+          if(!r.createddate && r.datecreated) r.createddate = r.datecreated
+          if(!r.updateddate && r.dateupdated) r.updateddate = r.dateupdated
+        })
+      }
+      list(filter){
+        let a = this.data.slice()
+        if(filter){
+          if(filter.prefix) a = a.filter(r=>r.prefix===filter.prefix)
+          if(filter.collection) a = a.filter(r=>r.collection===filter.collection)
+        }
+        return a
+      }
+      get(id){ return this.data.find(r=>r.id===Number(id)) }
+      async persist(){ if(this.queue) this.queue.pushSnapshot(this.data) }
+      nextId(){ return (this.data.reduce((m,r)=>Math.max(m,Number(r.id)||0),0)||0)+1 }
+      nextRelid(prefix,collection){ const a = this.data.filter(r=>r.prefix===prefix && r.collection===collection); return a.reduce((m,r)=>Math.max(m,Number(r.relid)||0),0)+1 }
+      async create(payload){
+        ensureAuth()
+        const prefix = (payload.prefix||config.defaultPrefix)
+        const collection = payload.collection||''
+        const now = new Date().toISOString()
+        const id = this.nextId()
+        const relid = payload.relid?Number(payload.relid):this.nextRelid(prefix,collection)
+        const metavalue = payload.metavalue && typeof payload.metavalue==='object' ? payload.metavalue : (payload.metavalue||'')
+        const row = { id, relid, prefix, collection, metakey: payload.metakey||'', metavalue, createddate: now, updateddate: now }
+        this.data.push(row)
+        outboxPush('create', row)
+        await this.persist()
+        return row
+      }
+      async update(id,payload){
+        ensureAuth()
+        const row = this.get(id); if(!row) throw new Error('not_found')
+        Object.keys(payload||{}).forEach(k=>{ row[k]=payload[k] })
+        row.updateddate = new Date().toISOString()
+        outboxPush('update', { id, payload })
+        await this.persist()
+        return row
+      }
+      async remove(id){
+        ensureAuth()
+        const n = Number(id)
+        this.data = this.data.filter(r=>r.id!==n)
+        outboxPush('remove', { id:n })
+        await this.persist()
+        if(this.queue) await this.queue.flush()
+        return true
+      }
+    }
+
+    let adapter
+    let db
+    let queue
+    const statusEl = document.getElementById('status')
+    const rowsEl = document.getElementById('rows')
+    const filterCollection = document.getElementById('filter-collection')
+    const filterPrefix = document.getElementById('filter-prefix')
+    const filterKey = document.getElementById('filter-key')
+    const filterValue = document.getElementById('filter-value')
+    const pageSizeEl = document.getElementById('page-size')
+    const paginationEl = document.getElementById('pagination')
+    const formEl = document.getElementById('form')
+    const formTitle = document.getElementById('form-title')
+    const fPrefix = document.getElementById('f-prefix')
+    const fRelid = document.getElementById('f-relid')
+    const fCollection = document.getElementById('f-collection')
+    const fMetakey = document.getElementById('f-metakey')
+    const fMetavalue = document.getElementById('f-metavalue')
+    let currentMode = 'create'
+    let currentData = []
+    let currentPage = 1
+    let pageSize = Number(pageSizeEl.value)
+    let editingId = null
+    const fTotal = document.getElementById('footer-total')
+    const fCollections = document.getElementById('footer-collections')
+    const fPrefixes = document.getElementById('footer-prefixes')
+    const fPending = document.getElementById('footer-pending')
+    const fLock = document.getElementById('footer-lock')
+    const fLast = document.getElementById('footer-last')
+    const fSelfTest = document.getElementById('footer-selftest')
+    const footerConflict = document.getElementById('footer-conflict')
+    const footerRemote = document.getElementById('footer-remote')
+    const footerLocal = document.getElementById('footer-local')
+    let selfTestActive = false
+    let selfTestResult = null
+    let processes = { refresh:false, init:false, flush:false, selftest:false, import:false, export:false }
+    function anyProcessRunning(){ return Object.values(processes).some(v=>!!v) }
+    function updateRefreshButton(){ const btn = document.getElementById('refresh'); if(btn) btn.disabled = anyProcessRunning() }
+    let outbox=[]
+    let lastQueueId=null
+    function outboxLoad(){ try{ const t = localStorage.getItem('cedb_outbox'); outbox = t? JSON.parse(t):[] }catch(_){ outbox=[] } }
+    function outboxSave(){ try{ localStorage.setItem('cedb_outbox', JSON.stringify(outbox)) }catch(_){ } }
+    function setAppMsg(t, kind){ const el=document.getElementById('app-msg'); if(!el) return; el.style.display='block'; el.className='notice '+(kind==='error'?'notice-error':'notice-success'); el.textContent=t; setTimeout(()=>{ el.style.display='none' }, 2500) }
+    function outboxPush(kind, payload){ const id = Date.now()+Math.random(); outbox.push({ id, kind, status:'queued', payload }); lastQueueId=id; outboxSave(); setAppMsg('Your data is processing (#'+Math.floor(id)+')','success'); return id }
+    function outboxMarkAll(status){ outbox = outbox.map(x=>Object.assign(x,{status})); outboxSave() }
+    function outboxCount(){ return outbox.filter(x=>x.status!=='synced').length }
+
+    function renderCollections(data){
+      const set = new Set()
+      data.forEach(r=>{ if(r.collection) set.add(r.collection) })
+      const prev = filterCollection.value
+      filterCollection.innerHTML = '<option value="">All collections</option>' + Array.from(set).map(c=>`<option ${c===prev?'selected':''} value="${c}">${c}</option>`).join('')
+      const pset = new Set(); data.forEach(r=>{ if(r.prefix) pset.add(r.prefix) })
+      const pprev = filterPrefix.value
+      filterPrefix.innerHTML = '<option value="">All prefixes</option>' + Array.from(pset).map(c=>`<option ${c===pprev?'selected':''} value="${c}">${c}</option>`).join('')
+    }
+
+    function applyFilter(row){
+      if(filterPrefix.value && row.prefix!==filterPrefix.value) return false
+      if(filterCollection.value && row.collection!==filterCollection.value) return false
+      if(filterKey.value && String(row.metakey||'').toLowerCase().indexOf(filterKey.value.toLowerCase())===-1) return false
+      if(filterValue.value && String(row.metavalue||'').toLowerCase().indexOf(filterValue.value.toLowerCase())===-1) return false
+      return true
+    }
+
+    function renderRows(){
+      const filtered = currentData.filter(applyFilter)
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+      if(currentPage>totalPages) currentPage = totalPages
+      const start = (currentPage-1)*pageSize
+      const pageItems = filtered.slice(start, start+pageSize)
+      if(pageItems.length===0){
+        rowsEl.innerHTML = `<tr><td colspan="9" class="muted">No records</td></tr>`
+        renderPagination(totalPages)
+        renderStatus()
+        return
+      }
+      rowsEl.innerHTML = pageItems.map(r=>{
+        const editing = editingId===r.id
+        return `
+        <tr>
+          <td>${r.id}</td>
+          <td>${editing?`<input class="cell" data-field="prefix" value="${r.prefix??''}">`:(r.prefix??'')}</td>
+          <td>${editing?`<input class="cell" data-field="relid" type="number" value="${r.relid??''}">`:(r.relid??'')}</td>
+          <td>${editing?`<input class="cell" data-field="collection" value="${r.collection??''}">`:(r.collection??'')}</td>
+          <td>${editing?`<input class="cell" data-field="metakey" value="${r.metakey??''}">`:(r.metakey??'')}</td>
+          <td>${editing?`<input class="cell" data-field="metavalue" value="${typeof r.metavalue==='object'?JSON.stringify(r.metavalue):r.metavalue??''}">`:(typeof r.metavalue==='object'?JSON.stringify(r.metavalue):r.metavalue??'')}</td>
+          <td>${r.createddate||r.datecreated||''}</td>
+          <td>${r.updateddate||r.dateupdated||''}</td>
+          <td class="actions">
+            ${editing?`
+              <button data-act="save" data-id="${r.id}" title="Save"><svg class="icon" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+              <button data-act="cancel" data-id="${r.id}" title="Cancel"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+            `:`
+              <button data-act="edit" data-id="${r.id}" title="Edit">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+            `}
+            <button data-act="delete" class="danger" data-id="${r.id}" title="Delete">
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
+          </td>
+        </tr>`
+      }).join('')
+      renderPagination(totalPages)
+      renderStatus()
+    }
+
+    function renderPagination(totalPages){
+      const parts=[]
+      parts.push(`<button data-page="prev">Prev</button>`)
+      for(let p=1;p<=totalPages;p++){
+        parts.push(`<button data-page="${p}" ${p===currentPage?'style="font-weight:bold"':''}>${p}</button>`)
+      }
+      parts.push(`<button data-page="next">Next</button>`)
+      paginationEl.innerHTML = parts.join(' ')
+    }
+
+    function renderStatus(){
+      const lockRaw = localStorage.getItem('cedb_lock'); let lock=null; try{ lock = lockRaw?JSON.parse(lockRaw):null }catch(_){ lock=null }
+      const pending = !!localStorage.getItem('cedb_queue')
+      const last = queue && queue.lastFlushAt ? new Date(queue.lastFlushAt).toLocaleTimeString() : '—'
+      const st = selfTestActive? (selfTestResult||'running') : 'disabled'
+      statusEl.innerHTML = `
+        <span class="badge">Pending: ${pending?'Yes':'No'}</span>
+        <span class="badge">Lock: ${lock&&lock.owner? (lock.owner===tabId?'This tab':'Other') : 'None'}</span>
+        <span class="badge">Last Flush: ${last}</span>
+        <span class="badge">SelfTest: ${st}</span>
+        <span class="badge">Queue: ${outboxCount()}</span>
+        <span class="badge">Conn: ${connStatus}</span>
+      `
+      const total = currentData.length
+      const collSet = new Set(currentData.map(r=>r.collection).filter(Boolean))
+      const prefSet = new Set(currentData.map(r=>r.prefix).filter(Boolean))
+      fTotal.textContent = `Total: ${total}`
+      fCollections.textContent = `Collections: ${collSet.size}`
+      fPrefixes.textContent = `Prefixes: ${prefSet.size}`
+      fPending.textContent = `Pending: ${pending?'Yes':'No'}`
+      fLock.textContent = `Lock: ${lock&&lock.owner? (lock.owner===tabId?'This tab':'Other') : 'None'}`
+      fLast.textContent = `Last Flush: ${last}`
+      fSelfTest.textContent = `SelfTest: ${st}`
+      const qn = outboxCount(); if(qn>0){ statusEl.innerHTML += ` <span class="badge">Processing: ${qn}</span>` }
+      updateRefreshButton()
+    }
+
+    async function init(){
+      await loadConfig()
+      const sraw = localStorage.getItem('cedb_settings'); let settings=null; try{ settings = sraw? JSON.parse(sraw):null }catch(_){ settings=null }
+      if(settings){ if(settings.snapshotUrl) { if(!config.http) config.http={}; config.http.url = settings.snapshotUrl } if(settings.writeUrl){ if(!config.http) config.http={}; config.http.method = settings.writeMethod||'PUT'; config.http.headers = settings.headers||{}; config.http.url = settings.writeUrl } if(settings.snapshotUrl || settings.writeUrl){ config.adapter = 'http' } }
+      adapter = config.adapter==='http'? new HttpAdapter(config.http||{}) : (config.adapter==='indexedDB'? new IndexedDBAdapter('coreenginedb') : new LocalStorageAdapter('coreenginedb'))
+      db = new DB(adapter)
+      queue = new WriteQueue(db); db.queue = queue; queue.loadPending()
+      outboxLoad()
+      await maybeRequireLogin()
+      currentData = await db.load()
+      try{ const pr = localStorage.getItem('cedb_queue'); if(pr){ const t = JSON.parse(pr); if(Array.isArray(t)){ db.data = t; currentData = db.list() } } }catch(_){ }
+      if(queue && queue.pending) { try{ await queue.flush() }catch(_){ } }
+      if(!currentData.length){
+        const snapUrl = (settings&&settings.snapshotUrl) || (config.http&&config.http.url) || '/json/db.json'
+        try{ const r = await fetch(snapUrl,{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); await queue.flush(); currentData = await db.load(); connStatus='up' } else { connStatus='down' } } else { connStatus='down' } }catch(_){ connStatus='down' }
+      }
+      fPrefix.value = config.defaultPrefix
+      if(!editorMetavalue) editorMetavalue = makeEditor('f-metavalue')
+      renderCollections(currentData)
+      renderRows()
+      renderStatus()
+      const params = new URLSearchParams(location.search)
+      if(params.get('selftest')==='1'){ selfTestActive=true; await runSelfTest() }
+    }
+    let csrfToken = null
+    let sessionUser = null
+    async function maybeRequireLogin(){
+      const auth = config.auth||{}
+      if(!auth.enabled) return
+      const authed = localStorage.getItem('cedb_authenticated')==='1'
+      if(authed){ const loginEl = document.getElementById('login'); if(loginEl){ loginEl.classList.add('hidden'); setTimeout(()=>{ loginEl.remove() }, 0) } return }
+      const sesRaw = localStorage.getItem('cedb_session'); let ses=null; try{ ses = sesRaw?JSON.parse(sesRaw):null }catch(_){ ses=null }
+      const now = Date.now()
+      if(ses && ses.expiresAt>now){ sessionUser = ses.username; csrfToken = ses.csrf; localStorage.setItem('cedb_authenticated','1'); return }
+      const loginEl = document.getElementById('login'); loginEl.classList.remove('hidden'); document.body.style.overflow='hidden'
+      return new Promise((resolve)=>{
+        async function attempt(){
+          const msgEl = document.getElementById('login-msg')
+          function setMsg(t, kind){ msgEl.style.display='block'; msgEl.className = 'notice ' + (kind==='error'?'notice-error':'notice-success'); msgEl.textContent = t }
+          const u = document.getElementById('login-username').value
+          const p = document.getElementById('login-password').value
+          if(!u || !p){ setMsg('Please enter username and password','error'); return }
+          const submitBtn = document.getElementById('login-submit'); if(submitBtn) submitBtn.disabled = true
+          const user = (auth.users||[]).find(x=>x.username===u) || { username:'admin', iterations:100000, salt:(auth.salt||'coreenginedb'), hash: localStorage.getItem('cedb_auth_hash_admin')||'' }
+          let hash
+          try{ hash = hasSubtle()? await pbkdf2(p, user.salt, user.iterations||100000) : await simpleHash(p, user.salt) }catch(_){ hash = await simpleHash(p, user.salt) }
+          if(user.hash && user.hash.length){ if(hash!==user.hash){ setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return } }
+          else {
+            if(u==='admin' && p==='securepassword'){
+              localStorage.setItem('cedb_auth_hash_admin', hash)
+              if(!auth.users) auth.users = []
+              const idx = auth.users.findIndex(x=>x.username==='admin')
+              if(idx>=0) auth.users[idx].hash = hash; else auth.users.push({ username:'admin', iterations:100000, salt:(auth.salt||'coreenginedb'), hash })
+            } else { setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return }
+          }
+          sessionUser = u
+          csrfToken = randomToken(32)
+          const ttl = (auth.sessionTTL||3600)*1000
+          localStorage.setItem('cedb_session', JSON.stringify({ username:u, csrf:csrfToken, expiresAt: Date.now()+ttl }))
+          localStorage.setItem('cedb_authenticated','1')
+          setMsg('Login successful','success')
+          loginEl.classList.add('hidden'); document.body.style.overflow='auto'
+          setTimeout(()=>{ loginEl.remove() }, 100)
+          resolve()
+        }
+        document.getElementById('login-submit').onclick = attempt
+        const closeBtn = document.getElementById('login-close')
+        if(closeBtn){ closeBtn.onclick = ()=>{ document.getElementById('login-password').value=''; document.getElementById('login-username').value='admin' } }
+        document.getElementById('login-password').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attempt() })
+        document.getElementById('login-username').addEventListener('keydown', (e)=>{ if(e.key==='Enter') attempt() })
+        const toggle = document.getElementById('login-toggle')
+        if(toggle){
+          toggle.onclick = ()=>{
+            const inp = document.getElementById('login-password')
+            const isPw = inp.type==='password'
+            inp.type = isPw? 'text':'password'
+            toggle.innerHTML = isPw ?
+              '<img src="./eye.svg" alt="Show/Hide Password" width="18">' :
+              '<img src="./eye-off.svg" alt="Show/Hide Password" width="18">'
+          }
+        }
+      })
+    }
+    function ensureAuth(){ const auth = config.auth||{}; if(!auth.enabled) return; const authed = localStorage.getItem('cedb_authenticated')==='1'; if(authed) return; const sesRaw = localStorage.getItem('cedb_session'); let ses=null; try{ ses = sesRaw?JSON.parse(sesRaw):null }catch(_){ } if(!ses || !ses.csrf){ throw new Error('unauthorized') } }
+
+    function openCreate(){
+      currentMode='create'
+      formTitle.textContent='Create'
+      fPrefix.value=config.defaultPrefix
+      fRelid.value=''
+      fCollection.value=''
+      fMetakey.value=''
+      if(editorMetavalue){ editorMetavalue.setValue(''); validateEditor(editorMetavalue) } else { fMetavalue.value='' }
+      formEl.classList.remove('hidden'); formEl.classList.add('open')
+    }
+
+    function openEdit(id){
+      currentMode='edit'
+      editingId = id
+      renderRows()
+    }
+
+    async function save(){
+      if(currentMode==='create'){
+        const payload={
+          prefix: fPrefix.value||config.defaultPrefix,
+          relid: fRelid.value?Number(fRelid.value):undefined,
+          collection: fCollection.value||'',
+          metakey: fMetakey.value||'',
+          metavalue: (()=>{ const raw = editorMetavalue? editorMetavalue.getValue() : fMetavalue.value; try{ return JSON.parse(raw) }catch(_){ return raw||'' } })()
+        }
+        await db.create(payload)
+        formEl.classList.remove('open'); formEl.classList.add('hidden')
+        currentData = db.list()
+        renderCollections(currentData)
+        renderRows()
+      } else {
+        const id = editingId
+        const rowEl = [...rowsEl.children].find(tr=>tr.querySelector(`[data-id="${id}"]`))
+        const payload={}
+        rowEl.querySelectorAll('input.cell').forEach(inp=>{
+          const k = inp.getAttribute('data-field')
+          if(k==='metavalue'){
+            try{ payload[k] = JSON.parse(inp.value) }catch(_){ payload[k] = inp.value }
+          } else {
+            payload[k] = inp.type==='number'?Number(inp.value):inp.value
+          }
+        })
+        await db.update(id,payload)
+        editingId=null
+        currentData = db.list()
+        renderRows()
+      }
+    }
+
+    async function remove(id){
+      await db.remove(id)
+      currentData = db.list()
+      renderCollections(currentData)
+      renderRows()
+    }
+
+    async function refresh(){
+      processes.refresh=true; updateRefreshButton()
+      const formEl = document.getElementById('form')
+      if(formEl) { formEl.classList.remove('open'); formEl.classList.add('hidden') }
+      const settingsDrawer = document.getElementById('settings-drawer')
+      if(settingsDrawer) { settingsDrawer.classList.remove('open'); settingsDrawer.classList.add('hidden') }
+      const footerConflict = document.getElementById('footer-conflict')
+      if(footerConflict) footerConflict.classList.add('hidden')
+      await init()
+      processes.refresh=false; updateRefreshButton()
+    }
+    document.getElementById('refresh').addEventListener('click', refresh)
+    document.getElementById('new').addEventListener('click', openCreate)
+    document.getElementById('save').addEventListener('click', save)
+    document.getElementById('cancel').addEventListener('click', ()=>{ formEl.classList.remove('open'); formEl.classList.add('hidden') })
+    document.getElementById('drawer-close').addEventListener('click', ()=>{ formEl.classList.remove('open'); formEl.classList.add('hidden') })
+    filterCollection.addEventListener('change', renderRows)
+    filterPrefix.addEventListener('change', renderRows)
+    filterKey.addEventListener('input', renderRows)
+    filterValue.addEventListener('input', renderRows)
+    pageSizeEl.addEventListener('change', ()=>{ pageSize = Number(pageSizeEl.value); currentPage=1; renderRows() })
+    paginationEl.addEventListener('click', (e)=>{
+      const b = e.target.closest('button'); if(!b) return
+      const attr = b.getAttribute('data-page')
+      if(attr==='prev') currentPage = Math.max(1, currentPage-1)
+      else if(attr==='next') currentPage = currentPage+1
+      else currentPage = Number(attr)
+      renderRows()
+    })
+    rowsEl.addEventListener('click', (e)=>{
+      const b = e.target.closest('button')
+      if(!b) return
+      const id = Number(b.getAttribute('data-id'))
+      const act = b.getAttribute('data-act')
+      if(act==='edit') openEdit(id)
+      if(act==='save') save()
+      if(act==='cancel'){ editingId=null; renderRows() }
+      if(act==='delete'){
+        if(currentData.length===1){ const ok = confirm('You are about to delete the last record and clear the snapshot. Continue?'); if(!ok) return }
+        remove(id)
+      }
+    })
+    document.getElementById('export').addEventListener('click', async ()=>{
+      processes.export=true; updateRefreshButton()
+      const data = currentData
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'})
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = 'db-export.json'
+      a.click()
+      URL.revokeObjectURL(a.href)
+      processes.export=false; updateRefreshButton()
+    })
+    document.getElementById('import').addEventListener('click', ()=>document.getElementById('import-file').click())
+    document.getElementById('import-file').addEventListener('change', async (e)=>{
+      processes.import=true; updateRefreshButton()
+      const file = e.target.files[0]; if(!file){ processes.import=false; updateRefreshButton(); return }
+      const text = await file.text()
+      try{
+        const json = JSON.parse(text)
+        if(Array.isArray(json)){
+          db.data = json
+          await db.persist()
+          currentData = db.list()
+          renderCollections(currentData)
+          renderRows()
+        }
+      } catch(err){ alert('Invalid JSON') }
+      processes.import=false; updateRefreshButton()
+    })
+    channel.onmessage = async (ev)=>{ const d = ev.data; if(!d) return; if(d.type==='flushed'){ outboxMarkAll('synced'); setAppMsg('Your data completed sync','success'); currentData = await db.load(); renderCollections(currentData); renderRows(); renderStatus() } if(d.type==='conflict'){ outboxMarkAll('failed'); setAppMsg('Sync conflict detected','error'); openConflict(); renderStatus() } }
+    async function openConflict(){
+      const remote = await adapter.read()
+      footerRemote.value = JSON.stringify(remote,null,2)
+      const pending = localStorage.getItem('cedb_queue')||''
+      footerLocal.value = pending
+      footerConflict.classList.remove('hidden')
+      if(!editorRemote) editorRemote = makeEditor('footer-remote'); if(editorRemote){ editorRemote.setValue(footerRemote.value); validateEditor(editorRemote) }
+      if(!editorLocal) editorLocal = makeEditor('footer-local'); if(editorLocal){ editorLocal.setValue(footerLocal.value); validateEditor(editorLocal) }
+    }
+    function closeConflict(){ footerConflict.classList.add('hidden') }
+    document.getElementById('footer-close').addEventListener('click', closeConflict)
+    document.getElementById('footer-use-local').addEventListener('click', async ()=>{ const t = editorLocal? editorLocal.getValue() : localStorage.getItem('cedb_queue'); if(!t) return; const target = JSON.parse(t); await adapter.write(target); localStorage.removeItem('cedb_queue'); if(queue) queue.pending=null; channel.postMessage({type:'flushed'}); closeConflict() })
+    document.getElementById('footer-use-remote').addEventListener('click', async ()=>{ const remote = await adapter.read(); db.data = Array.isArray(remote)?remote:[]; await db.adapter.write(db.data); localStorage.removeItem('cedb_queue'); if(queue) queue.pending=null; currentData = db.list(); renderCollections(currentData); renderRows(); closeConflict() })
+    function mergeArrays(local, remote){ const byId={}; remote.forEach(r=>{ byId[r.id]=r }); local.forEach(l=>{ const r = byId[l.id]; if(!r){ byId[l.id]=l } else { const ld = new Date(l.updateddate||l.createddate||0).getTime(); const rd = new Date(r.updateddate||r.createddate||0).getTime(); byId[l.id] = ld>=rd?l:r } }); return Object.values(byId).sort((a,b)=>(a.id||0)-(b.id||0)) }
+    document.getElementById('footer-merge').addEventListener('click', async ()=>{ const t = editorLocal? editorLocal.getValue() : localStorage.getItem('cedb_queue'); const local = t?JSON.parse(t):[]; const remote = editorRemote? JSON.parse(editorRemote.getValue()) : await adapter.read(); const merged = mergeArrays(local, Array.isArray(remote)?remote:[]); await adapter.write(merged); localStorage.removeItem('cedb_queue'); if(queue) queue.pending=null; channel.postMessage({type:'flushed'}); closeConflict() })
+    document.getElementById('footer-conflict-open').addEventListener('click', openConflict)
+    document.getElementById('footer-flush').addEventListener('click', async ()=>{ if(queue) await queue.flush(); renderStatus() })
+    document.getElementById('footer-selftest-run').addEventListener('click', async ()=>{ selfTestActive=true; selfTestResult=null; processes.selftest=true; renderStatus(); await runSelfTest(); processes.selftest=false; renderStatus() })
+    document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('/json/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
+    document.getElementById('footer-restore').addEventListener('click', async ()=>{ const t = localStorage.getItem('cedb_backup'); if(!t) return; try{ const j = JSON.parse(t); if(Array.isArray(j)){ db.data=j; await db.adapter.write(db.data); currentData = db.list(); renderCollections(currentData); renderRows() } }catch(_){ } })
+    document.getElementById('footer-logout').addEventListener('click', ()=>{ localStorage.removeItem('cedb_session'); localStorage.removeItem('cedb_authenticated'); location.reload() })
+    function openSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('hidden'); m.classList.add('open'); const sraw = localStorage.getItem('cedb_settings'); let s=null; try{ s=sraw?JSON.parse(sraw):null }catch(_){ s=null } document.getElementById('set-snapshot').value = (s&&s.snapshotUrl)||''; document.getElementById('set-write-url').value = (s&&s.writeUrl)||''; document.getElementById('set-write-method').value = (s&&s.writeMethod)||'PUT'; document.getElementById('set-headers').value = s&&s.headers? JSON.stringify(s.headers): '' }
+    function closeSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('open'); m.classList.add('hidden') }
+    function setMsg(t,kind){ const el=document.getElementById('set-msg'); el.style.display='block'; el.className='notice '+(kind==='error'?'notice-error':'notice-success'); el.textContent=t }
+    function normalizeUrl(u){ if(!u) return ''; try{ const host = location.hostname; let v = u.trim(); if(v.startsWith('http://localhost') && host==='127.0.0.1') v = v.replace('http://localhost','http://127.0.0.1'); if(v.startsWith('http://127.0.0.1') && host==='localhost') v = v.replace('http://127.0.0.1','http://localhost'); return v }catch(_){ return u } }
+    async function testSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); try{ if(snap){ const r = await fetch(snap,{cache:'no-store'}); if(!r.ok) { setMsg('Snapshot fetch failed','error'); return } } if(wurl){ let r2; try{ r2 = await fetch(wurl,{method:'HEAD', headers: hdrs}); }catch(_){ const alt = normalizeUrl(wurl); r2 = await fetch(alt,{method:'HEAD', headers: hdrs}); } if(!r2.ok){ setMsg('Write endpoint not reachable','error'); return } } setMsg('Connection OK','success'); connStatus='up'; renderStatus() }catch(_){ setMsg('Connection failed','error'); connStatus='down'; renderStatus() } }
+    function saveSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); const s={ snapshotUrl: snap||'', writeUrl: wurl||'', writeMethod: wmethod||'PUT', headers: hdrs }; localStorage.setItem('cedb_settings', JSON.stringify(s)); setMsg('Saved','success') }
+    function resetSettings(){ localStorage.removeItem('cedb_settings'); document.getElementById('set-snapshot').value=''; document.getElementById('set-write-url').value=''; document.getElementById('set-write-method').value='PUT'; document.getElementById('set-headers').value=''; setMsg('Reset','success') }
+    document.getElementById('settings').addEventListener('click', openSettings)
+    document.getElementById('set-close').addEventListener('click', closeSettings)
+    document.getElementById('settings-close').addEventListener('click', closeSettings)
+    document.getElementById('set-test').addEventListener('click', testSettings)
+    document.getElementById('set-save').addEventListener('click', saveSettings)
+    document.getElementById('set-reset').addEventListener('click', resetSettings)
+    function activityBase(){ const sraw = localStorage.getItem('cedb_settings'); let s=null; try{ s=sraw?JSON.parse(sraw):null }catch(_){ } let w = s&&s.writeUrl; if(!w){ const f = document.getElementById('set-write-url'); if(f && f.value) w = f.value.trim() } if(!w && config && config.http && config.http.url){ w = config.http.url } if(!w) return null; try{ const u = new URL(w, location.origin); return u.origin }catch(_){ return null } }
+    async function openActivity(){ const d = document.getElementById('activity-drawer'); d.classList.remove('hidden'); d.classList.add('open'); await refreshActivity() }
+    function closeActivity(){ const d = document.getElementById('activity-drawer'); d.classList.remove('open'); d.classList.add('hidden') }
+        async function refreshActivity(){ 
+      const base = activityBase(); 
+      const listEl = document.getElementById('activity-list'); 
+      if(!base){ 
+        listEl.innerHTML = '<div class="muted">No write server configured</div>'; 
+        return; 
+      } 
+      
+      try{ 
+        const r = await fetch(base+'/activity',{
+          cache:'no-store',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }); 
+        
+        if(r.status === 404) {
+          listEl.innerHTML = '<div class="muted">Activity endpoint not found (404)</div>'; 
+          return;
+        }
+        
+        if(!r.ok) { 
+          listEl.innerHTML = `<div class="muted">Failed to load activity (HTTP ${r.status})</div>`; 
+          return; 
+        } 
+        
+        // Try to parse as JSON
+        let arr;
+        try {
+          arr = await r.json();
+        } catch(parseErr) {
+          listEl.innerHTML = '<div class="muted">Invalid response format (not JSON)</div>';
+          return;
+        }
+        
+        if(!Array.isArray(arr)) {
+          listEl.innerHTML = '<div class="muted">Invalid activity data format</div>';
+          return;
+        }
+        
+        const byDay = {}; 
+        (arr||[]).forEach(e=>{ 
+          const day = String((e&&e.ts||'').slice(0,10)); 
+          if(!byDay[day]) byDay[day]=[]; 
+          byDay[day].push(e); 
+        }); 
+        
+        const days = Object.keys(byDay).sort((a,b)=>{ if(a<b) return 1; if(a>b) return -1; return 0 }); 
+        
+        if(days.length === 0) {
+          listEl.innerHTML = '<div class="muted">No activity data available</div>';
+          return;
+        }
+        
+        listEl.innerHTML = days.map(d=>{ 
+          const items = byDay[d]
+            .slice()
+            .sort((x,y)=> String(y.ts||'').localeCompare(String(x.ts||'')))
+            .map(e=>{
+              const status = e.status || '';
+              const success = e.success !== undefined ? e.success : (status >= 200 && status < 300);
+              const size = typeof e.size==='number' ? `${e.size}B` : '';
+              return `<div style="padding:8px;border-bottom:1px solid #eee">
+                <div><strong>${e.method || 'GET'}</strong> ${e.path || ''} 
+                <span class="muted">${status} ${success?'OK':'ERR'} ${size}</span></div>
+                <div class="muted">${e.ts || ''} • ${e.ip || ''} • ${e.user||''} • ${e.reason||''}</div>
+              </div>`;
+            }).join(''); 
+          return `<div><h3 style="margin:8px 0">${d}</h3>${items}</div>`; 
+        }).join(''); 
+        
+      } catch(err) { 
+        console.error('Activity fetch error:', err);
+        listEl.innerHTML = `<div class="muted">Error loading activity: ${err.message}</div>`; 
+      } 
+    }
+    
+    document.getElementById('activity').addEventListener('click', openActivity)
+    document.getElementById('activity-close').addEventListener('click', closeActivity)
+    document.getElementById('activity-refresh').addEventListener('click', refreshActivity)
+    let activityTimer=null
+    function setActivityTimer(on){ if(on){ if(activityTimer) return; activityTimer = setInterval(()=>{ const d=document.getElementById('activity-drawer'); if(d && d.classList.contains('open')) refreshActivity() }, 5000) } else { if(activityTimer){ clearInterval(activityTimer); activityTimer=null } } }
+    async function runSelfTest(){
+      try{
+        const beforeLen = currentData.length
+        const created = await db.create({ prefix: config.defaultPrefix, collection: 'test', metakey: 'k', metavalue: { foo:'bar' } })
+        await queue.flush()
+        const got = db.get(created.id)
+        if(!got || !(typeof got.metavalue==='object' && got.metavalue.foo==='bar')) throw new Error('create_failed')
+        await db.update(created.id,{ metavalue: { foo:'baz' } })
+        await queue.flush()
+        const upd = db.get(created.id)
+        if(!(typeof upd.metavalue==='object' && upd.metavalue.foo==='baz')) throw new Error('update_failed')
+        await db.remove(created.id)
+        await queue.flush()
+        const afterLen = db.list().length
+        if(afterLen!==beforeLen) throw new Error('remove_failed')
+        const blob = new Blob([JSON.stringify(currentData)], {type:'application/json'})
+        if(!(blob && blob.size>0)) throw new Error('export_failed')
+        const text = await blob.text()
+        const imported = JSON.parse(text)
+        if(!Array.isArray(imported)) throw new Error('import_parse_failed')
+        db.data = imported
+        await db.persist(); await queue.flush()
+        selfTestResult = 'pass'
+      } catch(e){ selfTestResult = 'fail' }
+      renderStatus()
+    }
+    init()
+    // Drawer tabs
+    const drawerTabs = document.getElementById('drawer-tabs')
+    const openDrawers = {}
+    function addTab(id, label){ if(openDrawers[id]) return; openDrawers[id]=label; renderTabs() }
+    function removeTab(id){ delete openDrawers[id]; renderTabs() }
+    function renderTabs(){ const ids = Object.keys(openDrawers); drawerTabs.innerHTML = ids.map(x=>`<button data-tab="${x}">${openDrawers[x]}</button>`).join(' '); }
+    drawerTabs.addEventListener('click', (e)=>{ const b=e.target.closest('button'); if(!b) return; const id=b.getAttribute('data-tab'); ['settings','activity','apikeys'].forEach(did=>{ const el=document.getElementById(did+'-drawer'); if(el){ if(did===id){ el.classList.add('open'); el.classList.remove('hidden') } else { el.classList.remove('open'); el.classList.add('hidden') } } }); setActivityTimer(id==='activity') })
+    function openApiKeys(){ const d=document.getElementById('apikeys-drawer'); d.classList.remove('hidden'); d.classList.add('open'); addTab('apikeys','API Keys'); loadApiKeys(); }
+    function closeApiKeys(){ const d=document.getElementById('apikeys-drawer'); d.classList.remove('open'); d.classList.add('hidden'); removeTab('apikeys') }
+    async function loadApiKeys(){ try{ const r = await fetch('/json/config.json',{cache:'no-store'}); const j = r.ok? await r.json() : {}; const keys = (j&&j.apiKeys)||[]; const list=document.getElementById('apikeys-list'); list.innerHTML = keys.length? keys.map(k=>`<div style="padding:8px;border-bottom:1px solid #eee"><code>${k}</code></div>`).join('') : '<div class="muted">No API keys</div>'; }catch(_){ }
+    }
+    function randomToken(n=32){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
+    async function createApiKey(){ try{ const head = await fetch('/json/config.json',{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch('/json/config.json'); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch('/json/config.json',{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }
+    document.getElementById('apikeys').addEventListener('click', ()=>{ openApiKeys(); addTab('activity','Activity'); addTab('settings','Settings') })
+    document.getElementById('apikeys-close').addEventListener('click', closeApiKeys)
+    document.getElementById('apikey-create').addEventListener('click', createApiKey)
+    // Keep tabs in sync when opening other drawers
+    function openSettingsTab(){ openSettings(); addTab('settings','Settings'); }
+    function openActivityTab(){ openActivity(); addTab('activity','Activity'); setActivityTimer(true) }
+    document.getElementById('settings').addEventListener('click', openSettingsTab)
+    document.getElementById('activity').addEventListener('click', openActivityTab)
+  </script>
+</body>
+</html>
