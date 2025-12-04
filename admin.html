@@ -12,12 +12,11 @@
 </div>
 <h1>Add Record</h1>
 <form id="row-form">
-  <label>Name <input type="text" id="name" required></label>
-  <label>Height <input type="number" id="height" required></label>
-  <label>Weight <input type="number" id="weight" required></label>
-  <label>Date <input type="text" id="date" required></label>
-  <label>Info <input type="text" id="info"></label>
-  <label>Country <input type="text" id="country" required></label>
+  <label>RelID <input type="number" id="relid" required></label>
+  <label>Prefix <input type="text" id="prefix" placeholder="e.g. app_" required></label>
+  <label>Collection <input type="text" id="collection" required></label>
+  <label>Meta Key <input type="text" id="metakey" required></label>
+  <label>Meta Value <input type="text" id="metavalue"></label>
   <button type="submit">Create</button>
 </form>
 <div id="status" style="margin-top:12px"></div>
@@ -41,7 +40,24 @@ async function cloudSave(records){try{await puter.fs.write('records.json',new Bl
 function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):[]}
 function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
 function nextSeq(records){let m=0;for(const r of records){const v=Number(r.seq)||0;if(v>m)m=v}return m+1}
-document.getElementById('row-form').addEventListener('submit',async e=>{e.preventDefault();const name=document.getElementById('name').value.trim();const height=document.getElementById('height').value.trim();const weight=document.getElementById('weight').value.trim();const date=document.getElementById('date').value.trim();const info=document.getElementById('info').value.trim();const country=document.getElementById('country').value.trim();if(!name||!height||!weight||!date||!country)return;let records=await cloudLoad();if(!records)records=load();const id=crypto.randomUUID();const seq=nextSeq(records);records.push({id,seq,user_link:`/username/${encodeURIComponent(name)}/`,name,height,weight,date,info,country});save(records);await cloudSave(records);document.getElementById('status').textContent='Saved. Seq '+seq;e.target.reset()})
+document.getElementById('row-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const relidVal = document.getElementById('relid').value.trim();
+  const prefix = document.getElementById('prefix').value.trim();
+  const collection = document.getElementById('collection').value.trim();
+  const metakey = document.getElementById('metakey').value.trim();
+  const metavalue = document.getElementById('metavalue').value.trim();
+  if(!relidVal || !prefix || !collection || !metakey) return;
+  let records = await cloudLoad();
+  if(!records) records = load();
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  records.push({id,relid:Number(relidVal),prefix,collection,metakey,metavalue,datecreated:now,dateupdated:now});
+  save(records);
+  await cloudSave(records);
+  document.getElementById('status').textContent = 'Saved. id '+id;
+  e.target.reset();
+})
 </script>
 </body>
 </html>

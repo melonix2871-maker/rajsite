@@ -10,8 +10,8 @@
 <div id="json-output" style="display:none"></div>
 <h1>Data</h1>
 <div style="margin:8px 0">
-  <label>Name <input id="filter-name" type="text" placeholder="filter name"></label>
-  <label style="margin-left:12px">Country <input id="filter-country" type="text" placeholder="filter country"></label>
+  <label>Collection <input id="filter-collection" type="text" placeholder="filter collection"></label>
+  <label style="margin-left:12px">Meta Key <input id="filter-metakey" type="text" placeholder="filter metakey"></label>
   <button id="apply-filter">Apply</button>
   <span id="status" style="margin-left:12px"></span>
   </div>
@@ -19,13 +19,13 @@
   <thead>
     <tr>
       <th class="coll-id">id</th>
-      <th class="coll-0">profile</th>
-      <th class="coll-1 name">name</th>
-      <th class="coll-2">height</th>
-      <th class="coll-3">weight</th>
-      <th class="coll-date">date</th>
-      <th class="coll-4"><span class="info">info</span></th>
-      <th class="coll-5">country</th>
+      <th class="coll-0">relid</th>
+      <th class="coll-1">prefix</th>
+      <th class="coll-2">collection</th>
+      <th class="coll-3">metakey</th>
+      <th class="coll-4">metavalue</th>
+      <th class="coll-5">datecreated</th>
+      <th class="coll-6">dateupdated</th>
     </tr>
   </thead>
   <tbody></tbody>
@@ -44,41 +44,23 @@ $result = [];
 foreach ($rows as $row) {
   $cells = $row->getElementsByTagName('td');
   if ($cells->length === 0) { continue; }
-  $nameCell = $cells->item(0);
-  $anchors = $nameCell->getElementsByTagName('a');
-  $user_link = '';
-  $name = '';
-  for ($i = 0; $i < $anchors->length; $i++) {
-    $href = $anchors->item($i)->getAttribute('href');
-    $text = trim($anchors->item($i)->textContent);
-    if ($href && strpos($href, '/username/') !== false) {
-      $user_link = $href;
-      if ($text) { $name = $text; }
-    }
-  }
-  if ($name === '') { $name = trim($nameCell->textContent); }
-  $height = '';
-  $weight = '';
-  $date   = '';
-  $info   = '';
-  $country = '';
-  if ($cells->length > 1) { $height = trim($cells->item(1)->textContent); }
-  if ($cells->length > 2) { $weight = trim($cells->item(2)->textContent); }
-  if ($cells->length > 3) { $date   = trim($cells->item(3)->textContent); }
-  if ($cells->length > 4) { $info   = trim($cells->item(4)->textContent); }
-  if ($cells->length > 5) {
-    $countryCell = $cells->item(5);
-    $a = $countryCell->getElementsByTagName('a')->item(0);
-    $country = $a ? trim($a->textContent) : trim($countryCell->textContent);
-  }
+  $id = trim($cells->item(0)->textContent);
+  $relid = (int) trim($cells->item(1)->textContent);
+  $prefix = trim($cells->item(2)->textContent);
+  $collection = trim($cells->item(3)->textContent);
+  $metakey = trim($cells->item(4)->textContent);
+  $metavalue = trim($cells->item(5)->textContent);
+  $datecreated = $cells->length > 6 ? trim($cells->item(6)->textContent) : '';
+  $dateupdated = $cells->length > 7 ? trim($cells->item(7)->textContent) : $datecreated;
   $result[] = [
-    "user_link" => $user_link,
-    "name" => $name,
-    "height" => $height,
-    "weight" => $weight,
-    "date" => $date,
-    "info" => $info,
-    "country" => $country
+    "id" => $id,
+    "relid" => $relid,
+    "prefix" => $prefix,
+    "collection" => $collection,
+    "metakey" => $metakey,
+    "metavalue" => $metavalue,
+    "datecreated" => $datecreated,
+    "dateupdated" => $dateupdated
   ];
 }
 echo json_encode($result, JSON_PRETTY_PRINT);
@@ -95,32 +77,31 @@ function getJson(){
 function renderFromJson(){
   const data = getJson();
   if(!data) return false;
-  const nameQ = document.getElementById('filter-name').value.trim().toLowerCase();
-  const countryQ = document.getElementById('filter-country').value.trim().toLowerCase();
+  const collectionQ = document.getElementById('filter-collection').value.trim().toLowerCase();
+  const metakeyQ = document.getElementById('filter-metakey').value.trim().toLowerCase();
   const filtered = data.filter(r =>
-    (!nameQ || String(r.name||'').toLowerCase().includes(nameQ)) &&
-    (!countryQ || String(r.country||'').toLowerCase().includes(countryQ))
+    (!collectionQ || String(r.collection||'').toLowerCase().includes(collectionQ)) &&
+    (!metakeyQ || String(r.metakey||'').toLowerCase().includes(metakeyQ))
   );
   const tbody = document.querySelector('#data-table tbody');
   tbody.innerHTML = '';
   for(let i=0;i<filtered.length;i++){
     const r = filtered[i];
-    const id = r.seq || (i+1);
-    const link = r.user_link ? `<a href="${r.user_link}">link</a>` : '';
+    const id = r.id || (i+1);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${id}</td><td>${link}</td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${r.date||''}</td><td>${r.info||''}</td><td>${r.country||''}</td>`;
+    tr.innerHTML = `<td>${id}</td><td>${r.relid||''}</td><td>${r.prefix||''}</td><td>${r.collection||''}</td><td>${r.metakey||''}</td><td>${r.metavalue||''}</td><td>${r.datecreated||''}</td><td>${r.dateupdated||''}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('status').textContent = `${filtered.length} rows`;
   return true;
 }
 document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); });
-function updateId1Name(){
+function updateId1Collection(){
   const data = getJson();
   if(!data || !data.length) return false;
   const rec = data.find(r => (r.seq||0) === 1) || data[0];
-  const el = document.getElementById('id1-name');
-  if(el) el.textContent = rec && rec.name ? rec.name : '';
+  const el = document.getElementById('id1-collection');
+  if(el) el.textContent = rec && rec.collection ? rec.collection : '';
   return true;
 }
 function updateDataTargets(){
@@ -132,21 +113,22 @@ function updateDataTargets(){
     const idNum = Number(idAttr);
     const rec = data.find(r => (Number(r.seq)||0) === idNum) || data[(idNum>0?idNum-1:0)] || data[0];
     const ds = el.dataset;
-    let field = 'name';
-    if ('weight' in ds) field = 'weight';
-    else if ('name' in ds) field = 'name';
-    else if ('height' in ds) field = 'height';
-    else if ('date' in ds) field = 'date';
-    else if ('info' in ds) field = 'info';
-    else if ('country' in ds) field = 'country';
-    el.textContent = rec && rec[field] ? rec[field] : '';
+    let field = 'collection';
+    if ('metavalue' in ds) field = 'metavalue';
+    else if ('metakey' in ds) field = 'metakey';
+    else if ('collection' in ds) field = 'collection';
+    else if ('prefix' in ds) field = 'prefix';
+    else if ('relid' in ds) field = 'relid';
+    else if ('datecreated' in ds) field = 'datecreated';
+    else if ('dateupdated' in ds) field = 'dateupdated';
+    el.textContent = rec && rec[field] !== undefined ? rec[field] : '';
   });
   return true;
 }
-document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Name(); updateDataTargets(); });
-const iv = setInterval(()=>{ const a = renderFromJson(); const b = updateId1Name(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 100);
+document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Collection(); updateDataTargets(); });
+const iv = setInterval(()=>{ const a = renderFromJson(); const b = updateId1Collection(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 100);
 </script>
-<div data-id="1" data-name style="margin-top:8px">display name here</div>
-<div data-id="1" data-weight style="margin-top:8px">display weight here</div>
+<div data-id="1" data-collection style="margin-top:8px">display collection here</div>
+<div data-id="1" data-metavalue style="margin-top:8px">display metavalue here</div>
 </body>
 </html>
