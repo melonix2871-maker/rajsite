@@ -13,7 +13,8 @@
   <button id="sign-out-btn" style="display:none">Sign out</button>
 </div>
 <script src="/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
 <div id="json-output" style="display:none"></div>
 <h1>Data</h1>
 <div style="margin:8px 0">
@@ -92,19 +93,20 @@ echo json_encode($result, JSON_PRETTY_PRINT);
 ?>
 </script>
 <script>
-// Clerk UI: show signed-in user details and sign-in/out
+// Firebase UI: show signed-in user details and sign-in/out
 (function(){
-  const loadClerkUI = async ()=>{
+  const loadFirebaseUI = async ()=>{
     try{
-      if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY) return;
-      await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
-      const clerk = Clerk;
+      if(!window.__CONFIG || !window.__CONFIG.firebase) return;
+      const firebaseConfig = window.__CONFIG.firebase;
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
       async function refresh(){
         try{
-          const user = await (clerk.user?.get?.() || clerk.user);
+          const user = auth.currentUser;
           if(user){
-            const uname = user.username || user.email || '';
-            document.getElementById('user-echo').textContent = `You login as '${uname}'`;
+            const uname = user.displayName || user.email || '';
+            document.getElementById('user-echo').textContent = `You logged in as '${uname}'`;
             document.getElementById('sign-in-btn').style.display='none';
             document.getElementById('sign-out-btn').style.display='';
           } else {
@@ -114,14 +116,15 @@ echo json_encode($result, JSON_PRETTY_PRINT);
           }
         }catch(e){ document.getElementById('user-echo').textContent='Not signed in'; }
       }
-      document.getElementById('sign-in-btn').addEventListener('click', ()=>{ clerk.openSignIn && clerk.openSignIn({ redirectUrl: window.location.href }); if(!clerk.openSignIn) window.location.href='https://clerk.com/sign-in?redirect_url='+encodeURIComponent(window.location.href); });
-      document.getElementById('sign-out-btn').addEventListener('click', async ()=>{ try{ await clerk.signOut?.(); }catch(_e){} refresh(); });
+      document.getElementById('sign-in-btn').addEventListener('click', ()=>{ window.location.href='login.html'; });
+      document.getElementById('sign-out-btn').addEventListener('click', async ()=>{ try{ await auth.signOut(); }catch(_e){} refresh(); });
+      auth.onAuthStateChanged(user=>{ refresh(); });
       refresh();
     }catch(_e){}
   };
-  // load config then clerk if available
-  if(window.__CONFIG && window.__CONFIG.CLERK_PUBLISHABLE_KEY){ loadClerkUI(); }
-  else { window.addEventListener('load', loadClerkUI); }
+  // load config then firebase if available
+  if(window.__CONFIG && window.__CONFIG.firebase){ loadFirebaseUI(); }
+  else { window.addEventListener('load', loadFirebaseUI); }
 })();
 
 function getJson(){

@@ -1,1 +1,1 @@
-window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '', ADMIN_USER_ID: '', ADMIN_USERNAME: '' };
+window.__CONFIG = { firebase: { apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' }, GIST_ID: '', GIST_FILENAME: '', ADMIN_USER_ID: '', ADMIN_USERNAME: '' };
