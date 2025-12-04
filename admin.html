@@ -35,10 +35,10 @@ async function guard(){
   try{
     // Check if Clerk user is loaded
     if(!Clerk.user){
-      document.getElementById('auth-status').textContent='Not authenticated';
+      document.getElementById('auth-status').textContent='Not authenticated - redirecting...';
       document.getElementById('logout').style.display='none';
       document.getElementById('row-form').style.display='none';
-      setTimeout(()=>{ window.location.href='login.html'; }, 2000);
+      setTimeout(()=>{ window.location.href='index.html'; }, 2000);
       return;
     }
     
@@ -47,9 +47,10 @@ async function guard(){
     const username = Clerk.user.username;
     
     if(userId !== ADMIN_USER_ID || username !== ADMIN_USERNAME){
-      document.getElementById('auth-status').textContent='Access Denied: Unauthorized user';
+      document.getElementById('auth-status').textContent='Access Denied: Unauthorized user - redirecting...';
       document.getElementById('logout').style.display='';
       document.getElementById('row-form').style.display='none';
+      setTimeout(()=>{ window.location.href='index.html'; }, 2000);
       return;
     }
     
