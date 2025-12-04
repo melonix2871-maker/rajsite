@@ -6,8 +6,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -42,9 +40,13 @@ jobs:
         run: |
           echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > config.js
 
+      - name: Clean up files not needed on Pages
+        run: |
+          rm -rf .github .git .gitignore build.js config.example.js
+
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
-          exclude_assets: '.git,*.local,.gitignore,.github'
+          cname: kwentonglasing.servebeer.com
