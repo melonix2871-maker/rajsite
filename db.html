@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
-<title>Data Table</title>
-<script async crossorigin="anonymous" src="https://cdn.clerk.com/clerk.js"></script>
+<title>Data Source</title>
 </head>
 <body>
  <div>details here storage db limit</div> 
@@ -13,27 +11,39 @@
 <thead>
   <tr>
     <th class="coll-0">id</th>
-    <th class="coll-1">relid</th>
-    <th class="coll-2">prefix</th>
-    <th class="coll-3">collection</th>
-    <th class="coll-4">metakey</th>
-    <th class="coll-5">metavalue</th>
-    <th class="coll-6">datecreated</th>
-    <th class="coll-7">dateupdated</th>
-    <th class="coll-8">actions</th>
+    <th class="coll-1 name">name</th>
+    <th class="coll-2">height</th>
+    <th class="coll-3">weight</th>
+    <th class="coll-date">date</th>
+    <th class="coll-4"><span class="info">info</span></th>
+    <th class="coll-5">country</th>
+    <th class="coll-6">actions</th>
   </tr>
 </thead>
 <tbody>
   <tr>
     <td class="coll-0">1</td>
-    <td class="coll-1">100</td>
-    <td class="coll-2">app_</td>
-    <td class="coll-3">users</td>
-    <td class="coll-4">role</td>
-    <td class="coll-5">admin</td>
-    <td class="coll-6">2025-01-01T12:00:00Z</td>
-    <td class="coll-7">2025-01-01T12:00:00Z</td>
-    <td class="coll-8"></td>
+    <td class="coll-1 name">
+      <a href="/username/Jhon Doe/" class="icon"><i class="flaticon-user"></i></a>
+      <a href="/username/Jhon Doe/">Jhon Doe</a>
+    </td>
+    <td class="coll-2 height">45</td>
+    <td class="coll-3 weight">50</td>
+    <td class="coll-date">9am May. 16th</td>
+    <td class="coll-4 size mob-info">abcd</td>
+    <td class="coll-5 country"><a href="/country/CA/">CA</a></td>
+  </tr>
+  <tr>
+    <td class="coll-0">2</td>
+    <td class="coll-1 name">
+      <a href="/username/Kasim Shk/" class="icon"><i class="flaticon-user"></i></a>
+      <a href="/username/Kasim Shk/">Kasim Shk</a>
+    </td>
+    <td class="coll-2 height">33</td>
+    <td class="coll-3 weight">54</td>
+    <td class="coll-date">Mar. 14th '18</td>
+    <td class="coll-4 size mob-info">ijkl</td>
+    <td class="coll-5 country"><a href="/country/UAE/">UAE</a></td>
   </tr>
 </tbody>
 </table>
@@ -41,11 +51,12 @@
 <h1>Add Row</h1>
 <form id="row-form">
   <input type="hidden" id="id">
-  <label>RelID <input type="number" id="relid" required></label>
-  <label>Prefix <input type="text" id="prefix" required></label>
-  <label>Collection <input type="text" id="collection" required></label>
-  <label>Meta Key <input type="text" id="metakey" required></label>
-  <label>Meta Value <input type="text" id="metavalue"></label>
+  <label>Name <input type="text" id="name" required></label>
+  <label>Height <input type="number" id="height" required></label>
+  <label>Weight <input type="number" id="weight" required></label>
+  <label>Date <input type="text" id="date" required></label>
+  <label>Info <input type="text" id="info"></label>
+  <label>Country <input type="text" id="country" required></label>
   <button type="submit">Create</button>
   <button type="button" id="update-btn" style="display:none">Update</button>
   <button type="button" id="cancel-btn" style="display:none">Cancel</button>
@@ -56,199 +67,23 @@
   <button id="export-json">Export JSON</button>
   <input type="file" id="import-json" accept="application/json">
   </div>
+<script src="https://js.puter.com/v2/"></script>
 <script>
-// Build script will inject these from .env.local
-<<<<<<< HEAD
-const GITHUB_TOKEN = '';
-const GIST_ID = '';
-const GIST_FILENAME = 'records.json';
-const ADMIN_USER_ID = 'user_36O9lkmQMpdYK9mm4BNHvKKKsME';
-const ADMIN_USERNAME = 'kwlasing_superadmin';
-=======
-const GITHUB_TOKEN = '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';
-const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
-const GIST_FILENAME = 'records.json';
->>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
 const KEY='records';
-function parseTbody(){
-  const rows=[...document.querySelectorAll('tbody tr')];
-  const out=[];
-  for(const row of rows){
-    const tds=row.querySelectorAll('td');
-    if(tds.length<7) continue;
-    const id = tds[0].textContent.trim();
-    const relid = Number(tds[1].textContent.trim()) || 0;
-    const prefix = tds[2].textContent.trim();
-    const collection = tds[3].textContent.trim();
-    const metakey = tds[4].textContent.trim();
-    const metavalue = tds[5].textContent.trim();
-    const datecreated = tds[6].textContent.trim();
-    const dateupdated = (tds[7] && tds[7].textContent.trim()) || datecreated;
-    out.push({id:id||crypto.randomUUID(),relid,prefix,collection,metakey,metavalue,datecreated,dateupdated});
-  }
-  return out
-}
+function parseTbody(){const rows=[...document.querySelectorAll('tbody tr')];const out=[];for(const row of rows){const tds=row.querySelectorAll('td');if(tds.length<7) continue;const nameCell=tds[1];const a=nameCell.querySelector('a[href*="/username/"]');const user_link=a?a.getAttribute('href'):'';const name=(a&&a.textContent)||nameCell.textContent.trim();const height=tds[2].textContent.trim();const weight=tds[3].textContent.trim();const date=tds[4].textContent.trim();const info=tds[5].textContent.trim();const cc=tds[6];const ca=cc.querySelector('a');const country=ca?ca.textContent.trim():cc.textContent.trim();out.push({id:crypto.randomUUID(),user_link,name,height,weight,date,info,country})}return out}
 function assignSeq(records){return records.map((r,i)=>({...r,seq:i+1}))}
 function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
 function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}
-async function cloudLoad(){
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{'Authorization':`token ${GITHUB_TOKEN}`}});
-    if(!res.ok) return null;
-    const gist = await res.json();
-    const file = gist.files[GIST_FILENAME];
-    if(!file) return null;
-    const j = JSON.parse(file.content);
-    if(Array.isArray(j)) return j;
-  }catch(_e){}
-  return null
-}
-async function cloudSave(records){
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{
-      method:'PATCH',
-      headers:{'Authorization':`token ${GITHUB_TOKEN}`,'Content-Type':'application/json'},
-      body:JSON.stringify({files:{[GIST_FILENAME]:{content:JSON.stringify(records,null,2)}}})
-    });
-    return res.ok;
-  }catch(_e){}
-  return false
-}
-function render(records){
-  const tb=document.querySelector('tbody');
-  tb.innerHTML='';
-  for(const r of records){
-    const tr=document.createElement('tr');
-    tr.innerHTML = `<td class="coll-0">${r.id||''}</td><td class="coll-1">${r.relid||''}</td><td class="coll-2">${r.prefix||''}</td><td class="coll-3">${r.collection||''}</td><td class="coll-4">${r.metakey||''}</td><td class="coll-5">${r.metavalue||''}</td><td class="coll-6">${r.datecreated||''}</td><td class="coll-7">${r.dateupdated||''}</td><td class="coll-8"><button data-action="edit" data-id="${r.id}">Edit</button><button data-action="delete" data-id="${r.id}">Delete</button></td>`;
-    tb.appendChild(tr);
-  }
-}
+async function cloudLoad(){try{const b=await puter.fs.read('records.json');const t=await b.text();const j=JSON.parse(t);if(Array.isArray(j))return j}catch(_e){}return null}
+async function cloudSave(records){try{await puter.fs.write('records.json',new Blob([JSON.stringify(records)],{type:'application/json'}))}catch(_e){}}
+function render(records){const tb=document.querySelector('tbody');tb.innerHTML='';for(const r of records){const userHref=r.user_link||`/username/${encodeURIComponent(r.name)}/`;const countryHref=`/country/${encodeURIComponent(r.country)}/`;const tr=document.createElement('tr');tr.innerHTML=`<td class="coll-0">${r.seq||''}</td><td class="coll-1 name"><a href="${userHref}" class="icon"><i class="flaticon-user"></i></a><a href="${userHref}">${r.name}</a></td><td class="coll-2 height">${r.height}</td><td class="coll-3 weight">${r.weight}</td><td class="coll-date">${r.date}</td><td class="coll-4 size mob-info">${r.info||''}</td><td class="coll-5 country"><a href="${countryHref}">${r.country}</a></td><td class="coll-6"><button data-action="edit" data-id="${r.id}">Edit</button><button data-action="delete" data-id="${r.id}">Delete</button></td>`;tb.appendChild(tr)}}
 async function ensure(){const cloud=await cloudLoad();if(cloud){const seqd=assignSeq(cloud);save(seqd);render(seqd)}else{const cur=load();if(cur){const seqd=assignSeq(cur);save(seqd);render(seqd)}else{const seed=parseTbody();const seqd=assignSeq(seed);save(seqd);render(seqd)}}}
-<<<<<<< HEAD
-async function guard(){
-  try{
-    // Check if Clerk user is loaded
-    if(!Clerk.user){
-      document.getElementById('auth-status').textContent='Not authenticated - redirecting...';
-      document.getElementById('logout').style.display='none';
-      document.getElementById('row-form').style.display='none';
-      document.querySelector('tbody').style.display='none';
-      document.getElementById('export-json').style.display='none';
-      document.getElementById('import-json').style.display='none';
-      document.getElementById('update-btn').style.display='none';
-      document.getElementById('cancel-btn').style.display='none';
-      setTimeout(()=>{ window.location.href='index.html'; }, 2000);
-      return;
-    }
-    
-    // Verify user ID and username
-    const userId = Clerk.user.id;
-    const username = Clerk.user.username;
-    
-    if(userId !== ADMIN_USER_ID || username !== ADMIN_USERNAME){
-      document.getElementById('auth-status').textContent='Access Denied: Unauthorized user - redirecting...';
-      document.getElementById('logout').style.display='';
-      document.getElementById('row-form').style.display='none';
-      document.querySelector('tbody').style.display='none';
-      document.getElementById('export-json').style.display='none';
-      document.getElementById('import-json').style.display='none';
-      document.getElementById('update-btn').style.display='none';
-      document.getElementById('cancel-btn').style.display='none';
-      setTimeout(()=>{ window.location.href='index.html'; }, 2000);
-      return;
-    }
-    
-    // User is authorized
-    const profile = localStorage.getItem('auth_profile');
-    if(profile){
-      try{ 
-        const p = JSON.parse(profile); 
-        document.getElementById('auth-status').textContent='Signed in: '+(p.email||p.name||p.id||username)+' (Clerk)'; 
-        document.getElementById('logout').style.display=''; 
-      }
-      catch(_e){ 
-        document.getElementById('auth-status').textContent='Authenticated ('+username+')'; 
-        document.getElementById('logout').style.display=''; 
-      }
-    }else{
-      document.getElementById('auth-status').textContent='Authenticated ('+username+')';
-      document.getElementById('logout').style.display='';
-    }
-  }catch(_e){ 
-    document.getElementById('auth-status').textContent='Auth check failed'; 
-  }
-}
-document.getElementById('logout').addEventListener('click',async()=>{ localStorage.removeItem('auth_token'); localStorage.removeItem('auth_profile'); window.location.href='login.html'; });
-=======
-async function guard(){try{if(localStorage.getItem('auth_token')){const token=localStorage.getItem('auth_token');document.getElementById('auth-status').textContent='Authenticated';document.getElementById('logout').style.display='';}else{document.getElementById('auth-status').textContent='Not authenticated';document.getElementById('logout').style.display='none';}}catch(_e){document.getElementById('auth-status').textContent='Auth check failed';}}
-document.getElementById('logout').addEventListener('click',async()=>{localStorage.removeItem('auth_token');window.location.href='login.html';});
->>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
+async function guard(){try{if(!puter.auth.isSignedIn()){window.location.href='login.html';return;}const u=await puter.auth.getUser();document.getElementById('auth-status').textContent='Signed in as: '+(u&&u.username||'');document.getElementById('logout').style.display='';}catch(_e){window.location.href='login.html';return;}}
+document.getElementById('logout').addEventListener('click',async()=>{try{await puter.auth.signOut();}catch(_e){}window.location.href='login.html';});
 guard();
-document.getElementById('row-form').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const relidVal = document.getElementById('relid').value.trim();
-  const prefix = document.getElementById('prefix').value.trim();
-  const collection = document.getElementById('collection').value.trim();
-  const metakey = document.getElementById('metakey').value.trim();
-  const metavalue = document.getElementById('metavalue').value.trim();
-  if(!relidVal || !prefix || !collection || !metakey) return;
-  let records = await cloudLoad(); if(!records) records = load()||parseTbody();
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  records.push({id,relid:Number(relidVal),prefix,collection,metakey,metavalue,datecreated:now,dateupdated:now,seq:records.length+1});
-  save(records);
-  await cloudSave(records);
-  render(records);
-  e.target.reset();
-})
-document.querySelector('tbody').addEventListener('click',async e=>{
-  const t=e.target; if(!(t instanceof Element)) return;
-  const a=t.getAttribute('data-action'); if(!a) return;
-  const id=t.getAttribute('data-id');
-  let records = await cloudLoad(); if(!records) records = load()||parseTbody();
-  if(a==='delete'){
-    records = records.filter(x=>x.id!==id);
-    records = assignSeq(records);
-    save(records);
-    await cloudSave(records);
-    render(records);
-  } else if(a==='edit'){
-    const r = records.find(x=>x.id===id);
-    if(!r) return;
-    document.getElementById('id').value = r.id;
-    document.getElementById('relid').value = r.relid||'';
-    document.getElementById('prefix').value = r.prefix||'';
-    document.getElementById('collection').value = r.collection||'';
-    document.getElementById('metakey').value = r.metakey||'';
-    document.getElementById('metavalue').value = r.metavalue||'';
-    document.querySelector('#row-form button[type="submit"]').style.display='none';
-    document.getElementById('update-btn').style.display='';
-    document.getElementById('cancel-btn').style.display='';
-  }
-})
-document.getElementById('update-btn').addEventListener('click',async()=>{
-  const id=document.getElementById('id').value;
-  let records = await cloudLoad(); if(!records) records = load()||parseTbody();
-  const idx = records.findIndex(x=>x.id===id);
-  if(idx!==-1){
-    const now = new Date().toISOString();
-    records[idx] = {
-      id,
-      relid: Number(document.getElementById('relid').value.trim())||0,
-      prefix: document.getElementById('prefix').value.trim(),
-      collection: document.getElementById('collection').value.trim(),
-      metakey: document.getElementById('metakey').value.trim(),
-      metavalue: document.getElementById('metavalue').value.trim(),
-      datecreated: records[idx].datecreated || now,
-      dateupdated: now,
-      seq: records[idx].seq
-    };
-    save(records);
-    await cloudSave(records);
-    render(records);
-    clearForm();
-  }
-})
+document.getElementById('row-form').addEventListener('submit',async e=>{e.preventDefault();const name=document.getElementById('name').value.trim();const height=document.getElementById('height').value.trim();const weight=document.getElementById('weight').value.trim();const date=document.getElementById('date').value.trim();const info=document.getElementById('info').value.trim();const country=document.getElementById('country').value.trim();if(!name||!height||!weight||!date||!country) return;let records=await cloudLoad();if(!records)records=load()||parseTbody();const id=crypto.randomUUID();records.push({id,seq:records.length+1,user_link:`/username/${encodeURIComponent(name)}/`,name,height,weight,date,info,country});save(records);await cloudSave(records);render(records);e.target.reset()})
+document.querySelector('tbody').addEventListener('click',async e=>{const t=e.target;if(!(t instanceof Element)) return;const a=t.getAttribute('data-action');if(!a) return;const id=t.getAttribute('data-id');let records=await cloudLoad();if(!records)records=load()||parseTbody();if(a==='delete'){records=records.filter(x=>x.id!==id);records=assignSeq(records);save(records);await cloudSave(records);render(records)}else if(a==='edit'){const r=records.find(x=>x.id===id);if(!r) return;document.getElementById('id').value=r.id;document.getElementById('name').value=r.name;document.getElementById('height').value=r.height;document.getElementById('weight').value=r.weight;document.getElementById('date').value=r.date;document.getElementById('info').value=r.info||'';document.getElementById('country').value=r.country;document.querySelector('#row-form button[type="submit"]').style.display='none';document.getElementById('update-btn').style.display='';document.getElementById('cancel-btn').style.display=''}})
+document.getElementById('update-btn').addEventListener('click',async()=>{const id=document.getElementById('id').value;let records=await cloudLoad();if(!records)records=load()||parseTbody();const idx=records.findIndex(x=>x.id===id);if(idx!==-1){const seq=records[idx].seq;records[idx]={id,seq,user_link:`/username/${encodeURIComponent(document.getElementById('name').value.trim())}/`,name:document.getElementById('name').value.trim(),height:document.getElementById('height').value.trim(),weight:document.getElementById('weight').value.trim(),date:document.getElementById('date').value.trim(),info:document.getElementById('info').value.trim(),country:document.getElementById('country').value.trim()};save(records);await cloudSave(records);render(records);clearForm()}})
 ensure()
 window.addEventListener('storage',e=>{if(e.key===KEY){const cur=load();const seqd=assignSeq(cur||parseTbody());save(seqd);render(seqd)}})
 document.getElementById('export-json').addEventListener('click',()=>{const data=JSON.stringify(load()||parseTbody(),null,2);const blob=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='records.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href)})

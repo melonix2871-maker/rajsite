@@ -3,9 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
 <title>Admin</title>
-<script async crossorigin="anonymous" src="https://cdn.clerk.com/clerk.js"></script>
 </head>
 <body>
 <div id="auth-bar" style="display:flex;gap:12px;align-items:center">
@@ -14,133 +12,36 @@
 </div>
 <h1>Add Record</h1>
 <form id="row-form">
-  <label>RelID <input type="number" id="relid" required></label>
-  <label>Prefix <input type="text" id="prefix" placeholder="e.g. app_" required></label>
-  <label>Collection <input type="text" id="collection" required></label>
-  <label>Meta Key <input type="text" id="metakey" required></label>
-  <label>Meta Value <input type="text" id="metavalue"></label>
+  <label>Name <input type="text" id="name" required></label>
+  <label>Height <input type="number" id="height" required></label>
+  <label>Weight <input type="number" id="weight" required></label>
+  <label>Date <input type="text" id="date" required></label>
+  <label>Info <input type="text" id="info"></label>
+  <label>Country <input type="text" id="country" required></label>
   <button type="submit">Create</button>
 </form>
 <div id="status" style="margin-top:12px"></div>
 <div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
+<script src="https://js.puter.com/v2/"></script>
 <script>
-// Build script will inject these from .env.local
-<<<<<<< HEAD
-const GITHUB_TOKEN = '';
-const GIST_ID = '';
-const GIST_FILENAME = 'records.json';
-const ADMIN_USER_ID = 'user_36O9lkmQMpdYK9mm4BNHvKKKsME';
-const ADMIN_USERNAME = 'kwlasing_superadmin';
-
 async function guard(){
   try{
-    // Check if Clerk user is loaded
-    if(!Clerk.user){
-      document.getElementById('auth-status').textContent='Not authenticated - redirecting...';
-      document.getElementById('logout').style.display='none';
-      document.getElementById('row-form').style.display='none';
-      setTimeout(()=>{ window.location.href='index.html'; }, 2000);
-      return;
-    }
-    
-    // Verify user ID and username
-    const userId = Clerk.user.id;
-    const username = Clerk.user.username;
-    
-    if(userId !== ADMIN_USER_ID || username !== ADMIN_USERNAME){
-      document.getElementById('auth-status').textContent='Access Denied: Unauthorized user - redirecting...';
-      document.getElementById('logout').style.display='';
-      document.getElementById('row-form').style.display='none';
-      setTimeout(()=>{ window.location.href='index.html'; }, 2000);
-      return;
-    }
-    
-    // User is authorized
-    const profile = localStorage.getItem('auth_profile');
-    if(profile){
-      try{ 
-        const p = JSON.parse(profile); 
-        document.getElementById('auth-status').textContent = 'Signed in: ' + (p.email || p.name || p.id || username) + ' (Clerk)';
-        document.getElementById('logout').style.display='';
-      }catch(_e){
-        document.getElementById('auth-status').textContent='Authenticated ('+username+')';
-        document.getElementById('logout').style.display='';
-      }
-    }else{
-      document.getElementById('auth-status').textContent='Authenticated ('+username+')';
-      document.getElementById('logout').style.display='';
-=======
-const GITHUB_TOKEN = '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';
-const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
-const GIST_FILENAME = 'records.json';
-
-async function guard(){
-  try{
-    if(localStorage.getItem('auth_token')){
-      const token=localStorage.getItem('auth_token');
-      document.getElementById('auth-status').textContent='Authenticated';
-      document.getElementById('logout').style.display='';
-    }else{
-      document.getElementById('auth-status').textContent='Not authenticated';
-      document.getElementById('logout').style.display='none';
->>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
-    }
-  }catch(_e){ document.getElementById('auth-status').textContent='Auth check failed'; }
+    if(!puter.auth.isSignedIn()){ window.location.href='login.html'; return; }
+    const u = await puter.auth.getUser();
+    const s = document.getElementById('auth-status');
+    s.textContent = 'Signed in as: ' + (u&&u.username||'');
+    document.getElementById('logout').style.display='';
+  }catch(_e){ window.location.href='login.html'; return; }
 }
-document.getElementById('logout').addEventListener('click', async ()=>{ 
-  localStorage.removeItem('auth_token'); 
-<<<<<<< HEAD
-  localStorage.removeItem('auth_profile'); 
-=======
->>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
-  window.location.href='login.html'; 
-});
+document.getElementById('logout').addEventListener('click', async ()=>{ try{ await puter.auth.signOut(); }catch(_e){} window.location.href='login.html'; });
 guard();
 const KEY='records';
-async function cloudLoad(){
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{'Authorization':`token ${GITHUB_TOKEN}`}});
-    if(!res.ok) return null;
-    const gist = await res.json();
-    const file = gist.files[GIST_FILENAME];
-    if(!file) return null;
-    const j = JSON.parse(file.content);
-    if(Array.isArray(j)) return j;
-  }catch(_e){}
-  return null
-}
-async function cloudSave(records){
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{
-      method:'PATCH',
-      headers:{'Authorization':`token ${GITHUB_TOKEN}`,'Content-Type':'application/json'},
-      body:JSON.stringify({files:{[GIST_FILENAME]:{content:JSON.stringify(records,null,2)}}})
-    });
-    return res.ok;
-  }catch(_e){}
-  return false
-}
+async function cloudLoad(){try{const b=await puter.fs.read('records.json');const t=await b.text();const j=JSON.parse(t);if(Array.isArray(j))return j}catch(_e){}return null}
+async function cloudSave(records){try{await puter.fs.write('records.json',new Blob([JSON.stringify(records)],{type:'application/json'}))}catch(_e){}}
 function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):[]}
 function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
 function nextSeq(records){let m=0;for(const r of records){const v=Number(r.seq)||0;if(v>m)m=v}return m+1}
-document.getElementById('row-form').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const relidVal = document.getElementById('relid').value.trim();
-  const prefix = document.getElementById('prefix').value.trim();
-  const collection = document.getElementById('collection').value.trim();
-  const metakey = document.getElementById('metakey').value.trim();
-  const metavalue = document.getElementById('metavalue').value.trim();
-  if(!relidVal || !prefix || !collection || !metakey) return;
-  let records = await cloudLoad();
-  if(!records) records = load();
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  records.push({id,relid:Number(relidVal),prefix,collection,metakey,metavalue,datecreated:now,dateupdated:now});
-  save(records);
-  await cloudSave(records);
-  document.getElementById('status').textContent = 'Saved. id '+id;
-  e.target.reset();
-})
+document.getElementById('row-form').addEventListener('submit',async e=>{e.preventDefault();const name=document.getElementById('name').value.trim();const height=document.getElementById('height').value.trim();const weight=document.getElementById('weight').value.trim();const date=document.getElementById('date').value.trim();const info=document.getElementById('info').value.trim();const country=document.getElementById('country').value.trim();if(!name||!height||!weight||!date||!country)return;let records=await cloudLoad();if(!records)records=load();const id=crypto.randomUUID();const seq=nextSeq(records);records.push({id,seq,user_link:`/username/${encodeURIComponent(name)}/`,name,height,weight,date,info,country});save(records);await cloudSave(records);document.getElementById('status').textContent='Saved. Seq '+seq;e.target.reset()})
 </script>
 </body>
 </html>

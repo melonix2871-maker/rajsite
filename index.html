@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,8 +10,8 @@
 <div id="json-output" style="display:none"></div>
 <h1>Data</h1>
 <div style="margin:8px 0">
-  <label>Collection <input id="filter-collection" type="text" placeholder="filter collection"></label>
-  <label style="margin-left:12px">Meta Key <input id="filter-metakey" type="text" placeholder="filter metakey"></label>
+  <label>Name <input id="filter-name" type="text" placeholder="filter name"></label>
+  <label style="margin-left:12px">Country <input id="filter-country" type="text" placeholder="filter country"></label>
   <button id="apply-filter">Apply</button>
   <span id="status" style="margin-left:12px"></span>
   </div>
@@ -20,37 +19,18 @@
   <thead>
     <tr>
       <th class="coll-id">id</th>
-      <th class="coll-0">relid</th>
-      <th class="coll-1">prefix</th>
-      <th class="coll-2">collection</th>
-      <th class="coll-3">metakey</th>
-      <th class="coll-4">metavalue</th>
-      <th class="coll-5">datecreated</th>
-      <th class="coll-6">dateupdated</th>
+      <th class="coll-0">profile</th>
+      <th class="coll-1 name">name</th>
+      <th class="coll-2">height</th>
+      <th class="coll-3">weight</th>
+      <th class="coll-date">date</th>
+      <th class="coll-4"><span class="info">info</span></th>
+      <th class="coll-5">country</th>
     </tr>
   </thead>
   <tbody></tbody>
   </table>
 <script async type="text/javascript" src="https://cdn.jsdelivr.net/npm/php-wasm/php-tags.jsdelivr.mjs"></script>
-<script>
-// Build script will inject these from .env.local
-const GITHUB_TOKEN = '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';
-const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
-const GIST_FILENAME = 'records.json';
-
-async function loadFromGist(){
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{'Authorization':`token ${GITHUB_TOKEN}`}});
-    if(!res.ok) return null;
-    const gist = await res.json();
-    const file = gist.files[GIST_FILENAME];
-    if(!file) return null;
-    const j = JSON.parse(file.content);
-    if(Array.isArray(j)) return j;
-  }catch(_e){}
-  return null
-}
-</script>
 <script id="db" src="db.html" type="text/html"></script>
 <script type="text/php" data-stdin="#db" data-stdout="#json-output">
 <?php
@@ -64,23 +44,41 @@ $result = [];
 foreach ($rows as $row) {
   $cells = $row->getElementsByTagName('td');
   if ($cells->length === 0) { continue; }
-  $id = trim($cells->item(0)->textContent);
-  $relid = (int) trim($cells->item(1)->textContent);
-  $prefix = trim($cells->item(2)->textContent);
-  $collection = trim($cells->item(3)->textContent);
-  $metakey = trim($cells->item(4)->textContent);
-  $metavalue = trim($cells->item(5)->textContent);
-  $datecreated = $cells->length > 6 ? trim($cells->item(6)->textContent) : '';
-  $dateupdated = $cells->length > 7 ? trim($cells->item(7)->textContent) : $datecreated;
+  $nameCell = $cells->item(0);
+  $anchors = $nameCell->getElementsByTagName('a');
+  $user_link = '';
+  $name = '';
+  for ($i = 0; $i < $anchors->length; $i++) {
+    $href = $anchors->item($i)->getAttribute('href');
+    $text = trim($anchors->item($i)->textContent);
+    if ($href && strpos($href, '/username/') !== false) {
+      $user_link = $href;
+      if ($text) { $name = $text; }
+    }
+  }
+  if ($name === '') { $name = trim($nameCell->textContent); }
+  $height = '';
+  $weight = '';
+  $date   = '';
+  $info   = '';
+  $country = '';
+  if ($cells->length > 1) { $height = trim($cells->item(1)->textContent); }
+  if ($cells->length > 2) { $weight = trim($cells->item(2)->textContent); }
+  if ($cells->length > 3) { $date   = trim($cells->item(3)->textContent); }
+  if ($cells->length > 4) { $info   = trim($cells->item(4)->textContent); }
+  if ($cells->length > 5) {
+    $countryCell = $cells->item(5);
+    $a = $countryCell->getElementsByTagName('a')->item(0);
+    $country = $a ? trim($a->textContent) : trim($countryCell->textContent);
+  }
   $result[] = [
-    "id" => $id,
-    "relid" => $relid,
-    "prefix" => $prefix,
-    "collection" => $collection,
-    "metakey" => $metakey,
-    "metavalue" => $metavalue,
-    "datecreated" => $datecreated,
-    "dateupdated" => $dateupdated
+    "user_link" => $user_link,
+    "name" => $name,
+    "height" => $height,
+    "weight" => $weight,
+    "date" => $date,
+    "info" => $info,
+    "country" => $country
   ];
 }
 echo json_encode($result, JSON_PRETTY_PRINT);
@@ -97,31 +95,32 @@ function getJson(){
 function renderFromJson(){
   const data = getJson();
   if(!data) return false;
-  const collectionQ = document.getElementById('filter-collection').value.trim().toLowerCase();
-  const metakeyQ = document.getElementById('filter-metakey').value.trim().toLowerCase();
+  const nameQ = document.getElementById('filter-name').value.trim().toLowerCase();
+  const countryQ = document.getElementById('filter-country').value.trim().toLowerCase();
   const filtered = data.filter(r =>
-    (!collectionQ || String(r.collection||'').toLowerCase().includes(collectionQ)) &&
-    (!metakeyQ || String(r.metakey||'').toLowerCase().includes(metakeyQ))
+    (!nameQ || String(r.name||'').toLowerCase().includes(nameQ)) &&
+    (!countryQ || String(r.country||'').toLowerCase().includes(countryQ))
   );
   const tbody = document.querySelector('#data-table tbody');
   tbody.innerHTML = '';
   for(let i=0;i<filtered.length;i++){
     const r = filtered[i];
-    const id = r.id || (i+1);
+    const id = r.seq || (i+1);
+    const link = r.user_link ? `<a href="${r.user_link}">link</a>` : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${id}</td><td>${r.relid||''}</td><td>${r.prefix||''}</td><td>${r.collection||''}</td><td>${r.metakey||''}</td><td>${r.metavalue||''}</td><td>${r.datecreated||''}</td><td>${r.dateupdated||''}</td>`;
+    tr.innerHTML = `<td>${id}</td><td>${link}</td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${r.date||''}</td><td>${r.info||''}</td><td>${r.country||''}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('status').textContent = `${filtered.length} rows`;
   return true;
 }
 document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); });
-function updateId1Collection(){
+function updateId1Name(){
   const data = getJson();
   if(!data || !data.length) return false;
   const rec = data.find(r => (r.seq||0) === 1) || data[0];
-  const el = document.getElementById('id1-collection');
-  if(el) el.textContent = rec && rec.collection ? rec.collection : '';
+  const el = document.getElementById('id1-name');
+  if(el) el.textContent = rec && rec.name ? rec.name : '';
   return true;
 }
 function updateDataTargets(){
@@ -133,205 +132,21 @@ function updateDataTargets(){
     const idNum = Number(idAttr);
     const rec = data.find(r => (Number(r.seq)||0) === idNum) || data[(idNum>0?idNum-1:0)] || data[0];
     const ds = el.dataset;
-    let field = 'collection';
-    if ('metavalue' in ds) field = 'metavalue';
-    else if ('metakey' in ds) field = 'metakey';
-    else if ('collection' in ds) field = 'collection';
-    else if ('prefix' in ds) field = 'prefix';
-    else if ('relid' in ds) field = 'relid';
-    else if ('datecreated' in ds) field = 'datecreated';
-    else if ('dateupdated' in ds) field = 'dateupdated';
-    el.textContent = rec && rec[field] !== undefined ? rec[field] : '';
+    let field = 'name';
+    if ('weight' in ds) field = 'weight';
+    else if ('name' in ds) field = 'name';
+    else if ('height' in ds) field = 'height';
+    else if ('date' in ds) field = 'date';
+    else if ('info' in ds) field = 'info';
+    else if ('country' in ds) field = 'country';
+    el.textContent = rec && rec[field] ? rec[field] : '';
   });
   return true;
 }
-document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Collection(); updateDataTargets(); });
-const iv = setInterval(async ()=>{ 
-  let a = renderFromJson(); 
-  let b = updateId1Collection(); 
-  let c = updateDataTargets(); 
-  if(!a){
-    const gistData = await loadFromGist();
-    if(gistData && Array.isArray(gistData)){
-      localStorage.setItem('records',JSON.stringify(gistData));
-      a = renderFromJson();
-      b = updateId1Collection();
-      c = updateDataTargets();
-    }
-  }
-  if(a && b && c){ clearInterval(iv); } 
-}, 100);
+document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Name(); updateDataTargets(); });
+const iv = setInterval(()=>{ const a = renderFromJson(); const b = updateId1Name(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 100);
 </script>
-<div data-id="1" data-collection style="margin-top:8px">display collection here</div>
-<div data-id="1" data-metavalue style="margin-top:8px">display metavalue here</div>
+<div data-id="1" data-name style="margin-top:8px">display name here</div>
+<div data-id="1" data-weight style="margin-top:8px">display weight here</div>
 </body>
 </html>
-=======
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Read Only Data</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230066ff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
-</head>
-<body>
-<div id="json-output" style="display:none"></div>
-<h1>Data</h1>
-<div style="margin:8px 0">
-  <label>Collection <input id="filter-collection" type="text" placeholder="filter collection"></label>
-  <label style="margin-left:12px">Meta Key <input id="filter-metakey" type="text" placeholder="filter metakey"></label>
-  <button id="apply-filter">Apply</button>
-  <span id="status" style="margin-left:12px"></span>
-  </div>
-<table id="data-table" class="table-list table table-responsive table-striped" style="width:100%">
-  <thead>
-    <tr>
-      <th class="coll-id">id</th>
-      <th class="coll-0">relid</th>
-      <th class="coll-1">prefix</th>
-      <th class="coll-2">collection</th>
-      <th class="coll-3">metakey</th>
-      <th class="coll-4">metavalue</th>
-      <th class="coll-5">datecreated</th>
-      <th class="coll-6">dateupdated</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-  </table>
-<script async type="text/javascript" src="https://cdn.jsdelivr.net/npm/php-wasm/php-tags.jsdelivr.mjs"></script>
-<script>
-// Build script will inject these from .env.local
-const GITHUB_TOKEN = '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';
-const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
-const GIST_FILENAME = 'records.json';
-
-async function loadFromGist(){
-  try{
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{'Authorization':`token ${GITHUB_TOKEN}`}});
-    if(!res.ok) return null;
-    const gist = await res.json();
-    const file = gist.files[GIST_FILENAME];
-    if(!file) return null;
-    const j = JSON.parse(file.content);
-    if(Array.isArray(j)) return j;
-  }catch(_e){}
-  return null
-}
-</script>
-<script id="db" src="db.html" type="text/html"></script>
-<script type="text/php" data-stdin="#db" data-stdout="#json-output">
-<?php
-error_reporting(E_ERROR | E_PARSE);
-libxml_use_internal_errors(true);
-$html = file_get_contents('php://stdin');
-$dom = new DOMDocument();
-$dom->loadHTML($html);
-$rows = $dom->getElementsByTagName('tr');
-$result = [];
-foreach ($rows as $row) {
-  $cells = $row->getElementsByTagName('td');
-  if ($cells->length === 0) { continue; }
-  $id = trim($cells->item(0)->textContent);
-  $relid = (int) trim($cells->item(1)->textContent);
-  $prefix = trim($cells->item(2)->textContent);
-  $collection = trim($cells->item(3)->textContent);
-  $metakey = trim($cells->item(4)->textContent);
-  $metavalue = trim($cells->item(5)->textContent);
-  $datecreated = $cells->length > 6 ? trim($cells->item(6)->textContent) : '';
-  $dateupdated = $cells->length > 7 ? trim($cells->item(7)->textContent) : $datecreated;
-  $result[] = [
-    "id" => $id,
-    "relid" => $relid,
-    "prefix" => $prefix,
-    "collection" => $collection,
-    "metakey" => $metakey,
-    "metavalue" => $metavalue,
-    "datecreated" => $datecreated,
-    "dateupdated" => $dateupdated
-  ];
-}
-echo json_encode($result, JSON_PRETTY_PRINT);
-?>
-</script>
-<script>
-function getJson(){
-  const ls = localStorage.getItem('records');
-  if(ls){ try{ return JSON.parse(ls) } catch(_e){ return null } }
-  const out = document.getElementById('json-output').textContent || document.getElementById('json-output').innerText;
-  if(!out) return null;
-  try { return JSON.parse(out); } catch(_e){ return null; }
-}
-function renderFromJson(){
-  const data = getJson();
-  if(!data) return false;
-  const collectionQ = document.getElementById('filter-collection').value.trim().toLowerCase();
-  const metakeyQ = document.getElementById('filter-metakey').value.trim().toLowerCase();
-  const filtered = data.filter(r =>
-    (!collectionQ || String(r.collection||'').toLowerCase().includes(collectionQ)) &&
-    (!metakeyQ || String(r.metakey||'').toLowerCase().includes(metakeyQ))
-  );
-  const tbody = document.querySelector('#data-table tbody');
-  tbody.innerHTML = '';
-  for(let i=0;i<filtered.length;i++){
-    const r = filtered[i];
-    const id = r.id || (i+1);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${id}</td><td>${r.relid||''}</td><td>${r.prefix||''}</td><td>${r.collection||''}</td><td>${r.metakey||''}</td><td>${r.metavalue||''}</td><td>${r.datecreated||''}</td><td>${r.dateupdated||''}</td>`;
-    tbody.appendChild(tr);
-  }
-  document.getElementById('status').textContent = `${filtered.length} rows`;
-  return true;
-}
-document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); });
-function updateId1Collection(){
-  const data = getJson();
-  if(!data || !data.length) return false;
-  const rec = data.find(r => (r.seq||0) === 1) || data[0];
-  const el = document.getElementById('id1-collection');
-  if(el) el.textContent = rec && rec.collection ? rec.collection : '';
-  return true;
-}
-function updateDataTargets(){
-  const data = getJson();
-  if(!data || !data.length) return false;
-  const nodes = document.querySelectorAll('[data-id]');
-  nodes.forEach(el => {
-    const idAttr = el.getAttribute('data-id');
-    const idNum = Number(idAttr);
-    const rec = data.find(r => (Number(r.seq)||0) === idNum) || data[(idNum>0?idNum-1:0)] || data[0];
-    const ds = el.dataset;
-    let field = 'collection';
-    if ('metavalue' in ds) field = 'metavalue';
-    else if ('metakey' in ds) field = 'metakey';
-    else if ('collection' in ds) field = 'collection';
-    else if ('prefix' in ds) field = 'prefix';
-    else if ('relid' in ds) field = 'relid';
-    else if ('datecreated' in ds) field = 'datecreated';
-    else if ('dateupdated' in ds) field = 'dateupdated';
-    el.textContent = rec && rec[field] !== undefined ? rec[field] : '';
-  });
-  return true;
-}
-document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Collection(); updateDataTargets(); });
-const iv = setInterval(async ()=>{ 
-  let a = renderFromJson(); 
-  let b = updateId1Collection(); 
-  let c = updateDataTargets(); 
-  if(!a){
-    const gistData = await loadFromGist();
-    if(gistData && Array.isArray(gistData)){
-      localStorage.setItem('records',JSON.stringify(gistData));
-      a = renderFromJson();
-      b = updateId1Collection();
-      c = updateDataTargets();
-    }
-  }
-  if(a && b && c){ clearInterval(iv); } 
-}, 100);
-</script>
-<div data-id="1" data-collection style="margin-top:8px">display collection here</div>
-<div data-id="1" data-metavalue style="margin-top:8px">display metavalue here</div>
-</body>
-</html>
->>>>>>> 7e72239 (feat: migrate schema and integrate GitHub Gist API with build script)
