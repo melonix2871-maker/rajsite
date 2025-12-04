@@ -40,13 +40,21 @@ jobs:
         run: |
           echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > config.js
 
-      - name: Clean up files not needed on Pages
+      - name: Prepare gh-pages deployment
         run: |
-          rm -rf .github .git .gitignore build.js config.example.js
+          mkdir -p /tmp/deploy
+          cp *.html /tmp/deploy/ 2>/dev/null || true
+          cp *.js /tmp/deploy/ 2>/dev/null || true
+          cp *.md /tmp/deploy/ 2>/dev/null || true
+          cp *.json /tmp/deploy/ 2>/dev/null || true
+          cp CNAME /tmp/deploy/ 2>/dev/null || true
+          cp config.js /tmp/deploy/ 2>/dev/null || true
+          cp records.json /tmp/deploy/ 2>/dev/null || true
+          ls -la /tmp/deploy/
 
-      - name: Deploy to gh-pages branch
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          publish_dir: /tmp/deploy
           cname: kwentonglasing.servebeer.com
