@@ -3,38 +3,137 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>Login</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+  .card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .status { padding: 12px; margin-bottom: 12px; border-radius: 4px; }
+  .status.success { background-color: #d4edda; color: #155724; }
+  .status.error { background-color: #f8d7da; color: #721c24; }
+</style>
 </head>
 <body>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
   <img alt="Logo" width="36" height="36" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%230066ff'/%3E%3Ctext x='18' y='23' font-size='16' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
   <span style="font-size:18px;font-weight:600">Admin Login</span>
 </div>
-<h1>Login</h1>
-<div id="status" style="margin-bottom:12px"></div>
-<button id="sign-in">Sign in</button>
-<button id="sign-out" style="display:none">Sign out</button>
-<div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
-<script src="https://js.puter.com/v2/"></script>
+
+<div id="auth-ui" style="display:none">
+  <h2>Already Signed In</h2>
+  <div style="padding:12px;background-color:#e7f3ff;border-radius:4px;margin-bottom:12px" id="auth-info"></div>
+  <button id="sign-out" style="padding:10px 16px;background-color:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer">Sign Out</button>
+</div>
+
+<div id="login-ui">
+  <div id="status" class="status" style="display:none"></div>
+  
+  <div class="card">
+    <h2>Sign In to Admin</h2>
+    <p style="color:#666;font-size:14px">Use Clerk to securely sign in.</p>
+    <div id="clerk-container" style="min-height:400px"></div>
+  </div>
+  
+  <p style="text-align:center;color:#666;font-size:12px;margin-top:24px">
+    <a href="index.html">Back to Home</a>
+  </p>
+</div>
+
+<script async crossorigin="anonymous" src="https://cdn.clerk.com/clerk.js"></script>
+
 <script>
-async function updateAuthUI(){
-  try{
-    if(puter.auth.isSignedIn()){
-      const u = await puter.auth.getUser();
-      document.getElementById('status').textContent = 'Signed in as: ' + (u&&u.username||'');
-      document.getElementById('sign-in').style.display='none';
-      document.getElementById('sign-out').style.display='';
-      window.location.href='admin.html';
-    }else{
-      document.getElementById('status').textContent = 'Not signed in';
-      document.getElementById('sign-in').style.display='';
-      document.getElementById('sign-out').style.display='none';
+// Build script will inject this from .env.local
+const CLERK_PUBLISHABLE_KEY = '';
+const ADMIN_EMAIL = '';
+
+window.addEventListener('load', async () => {
+  try {
+    if (!CLERK_PUBLISHABLE_KEY) {
+      document.getElementById('status').textContent = 'Error: Clerk publishable key not configured';
+      document.getElementById('status').style.display = 'block';
+      document.getElementById('status').classList.add('error');
+      return;
     }
-  }catch(_e){ document.getElementById('status').textContent='Error'; }
+    
+    // Initialize Clerk
+    await Clerk.load({
+      publishableKey: CLERK_PUBLISHABLE_KEY
+    });
+    
+    // Check if user is already signed in
+    if (Clerk.user) {
+      showAuthUI(Clerk.user);
+    } else {
+      showLoginUI();
+    }
+  } catch (e) {
+    console.error('Clerk initialization error:', e);
+    document.getElementById('status').textContent = 'Error: ' + e.message;
+    document.getElementById('status').style.display = 'block';
+    document.getElementById('status').classList.add('error');
+  }
+});
+
+function showLoginUI() {
+  document.getElementById('login-ui').style.display = 'block';
+  document.getElementById('auth-ui').style.display = 'none';
+  
+  // Mount the Clerk sign-in component
+  const clerkContainer = document.getElementById('clerk-container');
+  if (Clerk && Clerk.mountSignIn) {
+    Clerk.mountSignIn(clerkContainer, {
+      signUpUrl: '/login.html',
+      redirectUrl: '/admin.html'
+    });
+  }
 }
-document.getElementById('sign-in').addEventListener('click', async ()=>{ try{ await puter.auth.signIn(); }catch(_e){} updateAuthUI(); });
-document.getElementById('sign-out').addEventListener('click', async ()=>{ try{ await puter.auth.signOut(); }catch(_e){} updateAuthUI(); });
-updateAuthUI();
+
+function showAuthUI(user) {
+  document.getElementById('login-ui').style.display = 'none';
+  document.getElementById('auth-ui').style.display = 'block';
+  
+  const email = user.primaryEmailAddress?.emailAddress || user.email || user.username || 'User';
+  const name = user.firstName || user.fullName || email;
+  
+  // Store user profile in localStorage for compatibility with admin.html
+  const profile = {
+    id: user.id,
+    email: email,
+    name: name,
+    provider: 'clerk',
+    clerkUserId: user.id,
+    signedInAt: new Date().toISOString()
+  };
+  
+  localStorage.setItem('auth_token', 'clerk_' + user.id);
+  localStorage.setItem('auth_profile', JSON.stringify(profile));
+  
+  document.getElementById('auth-info').textContent = `Signed in as: ${name} (${email})`;
+  
+  setTimeout(() => {
+    window.location.href = 'admin.html';
+  }, 2000);
+}
+
+document.getElementById('sign-out').addEventListener('click', async () => {
+  if (Clerk) {
+    await Clerk.signOut();
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_profile');
+    location.reload();
+  }
+});
+
+// Listen for Clerk user changes
+if (window.Clerk) {
+  Clerk.addListener(({ user }) => {
+    if (user) {
+      showAuthUI(user);
+    } else {
+      showLoginUI();
+    }
+  });
+}
 </script>
 </body>
 </html>

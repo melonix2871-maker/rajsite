@@ -31,6 +31,25 @@
   <tbody></tbody>
   </table>
 <script async type="text/javascript" src="https://cdn.jsdelivr.net/npm/php-wasm/php-tags.jsdelivr.mjs"></script>
+<script>
+// Build script will inject these from .env.local
+const GITHUB_TOKEN = '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';
+const GIST_ID = '4cf6fd9610bf7df5b82fc036111bfc5d';
+const GIST_FILENAME = 'records.json';
+
+async function loadFromGist(){
+  try{
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{'Authorization':`token ${GITHUB_TOKEN}`}});
+    if(!res.ok) return null;
+    const gist = await res.json();
+    const file = gist.files[GIST_FILENAME];
+    if(!file) return null;
+    const j = JSON.parse(file.content);
+    if(Array.isArray(j)) return j;
+  }catch(_e){}
+  return null
+}
+</script>
 <script id="db" src="db.html" type="text/html"></script>
 <script type="text/php" data-stdin="#db" data-stdout="#json-output">
 <?php
@@ -126,7 +145,21 @@ function updateDataTargets(){
   return true;
 }
 document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Collection(); updateDataTargets(); });
-const iv = setInterval(()=>{ const a = renderFromJson(); const b = updateId1Collection(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 100);
+const iv = setInterval(async ()=>{ 
+  let a = renderFromJson(); 
+  let b = updateId1Collection(); 
+  let c = updateDataTargets(); 
+  if(!a){
+    const gistData = await loadFromGist();
+    if(gistData && Array.isArray(gistData)){
+      localStorage.setItem('records',JSON.stringify(gistData));
+      a = renderFromJson();
+      b = updateId1Collection();
+      c = updateDataTargets();
+    }
+  }
+  if(a && b && c){ clearInterval(iv); } 
+}, 100);
 </script>
 <div data-id="1" data-collection style="margin-top:8px">display collection here</div>
 <div data-id="1" data-metavalue style="margin-top:8px">display metavalue here</div>

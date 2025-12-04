@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>Admin</title>
+<script async crossorigin="anonymous" src="https://cdn.clerk.com/clerk.js"></script>
 </head>
 <body>
 <div id="auth-bar" style="display:flex;gap:12px;align-items:center">
@@ -21,22 +23,83 @@
 </form>
 <div id="status" style="margin-top:12px"></div>
 <div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
-<script src="https://js.puter.com/v2/"></script>
 <script>
+// Build script will inject these from .env.local
+const GITHUB_TOKEN = '';
+const GIST_ID = '';
+const GIST_FILENAME = 'records.json';
+const ADMIN_USER_ID = 'user_36O9lkmQMpdYK9mm4BNHvKKKsME';
+const ADMIN_USERNAME = 'kwlasing_superadmin';
+
 async function guard(){
   try{
-    if(!puter.auth.isSignedIn()){ window.location.href='login.html'; return; }
-    const u = await puter.auth.getUser();
-    const s = document.getElementById('auth-status');
-    s.textContent = 'Signed in as: ' + (u&&u.username||'');
-    document.getElementById('logout').style.display='';
-  }catch(_e){ window.location.href='login.html'; return; }
+    // Check if Clerk user is loaded
+    if(!Clerk.user){
+      document.getElementById('auth-status').textContent='Not authenticated';
+      document.getElementById('logout').style.display='none';
+      document.getElementById('row-form').style.display='none';
+      setTimeout(()=>{ window.location.href='login.html'; }, 2000);
+      return;
+    }
+    
+    // Verify user ID and username
+    const userId = Clerk.user.id;
+    const username = Clerk.user.username;
+    
+    if(userId !== ADMIN_USER_ID || username !== ADMIN_USERNAME){
+      document.getElementById('auth-status').textContent='Access Denied: Unauthorized user';
+      document.getElementById('logout').style.display='';
+      document.getElementById('row-form').style.display='none';
+      return;
+    }
+    
+    // User is authorized
+    const profile = localStorage.getItem('auth_profile');
+    if(profile){
+      try{ 
+        const p = JSON.parse(profile); 
+        document.getElementById('auth-status').textContent = 'Signed in: ' + (p.email || p.name || p.id || username) + ' (Clerk)';
+        document.getElementById('logout').style.display='';
+      }catch(_e){
+        document.getElementById('auth-status').textContent='Authenticated ('+username+')';
+        document.getElementById('logout').style.display='';
+      }
+    }else{
+      document.getElementById('auth-status').textContent='Authenticated ('+username+')';
+      document.getElementById('logout').style.display='';
+    }
+  }catch(_e){ document.getElementById('auth-status').textContent='Auth check failed'; }
 }
-document.getElementById('logout').addEventListener('click', async ()=>{ try{ await puter.auth.signOut(); }catch(_e){} window.location.href='login.html'; });
+document.getElementById('logout').addEventListener('click', async ()=>{ 
+  localStorage.removeItem('auth_token'); 
+  localStorage.removeItem('auth_profile'); 
+  window.location.href='login.html'; 
+});
 guard();
 const KEY='records';
-async function cloudLoad(){try{const b=await puter.fs.read('records.json');const t=await b.text();const j=JSON.parse(t);if(Array.isArray(j))return j}catch(_e){}return null}
-async function cloudSave(records){try{await puter.fs.write('records.json',new Blob([JSON.stringify(records)],{type:'application/json'}))}catch(_e){}}
+async function cloudLoad(){
+  try{
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{headers:{'Authorization':`token ${GITHUB_TOKEN}`}});
+    if(!res.ok) return null;
+    const gist = await res.json();
+    const file = gist.files[GIST_FILENAME];
+    if(!file) return null;
+    const j = JSON.parse(file.content);
+    if(Array.isArray(j)) return j;
+  }catch(_e){}
+  return null
+}
+async function cloudSave(records){
+  try{
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`,{
+      method:'PATCH',
+      headers:{'Authorization':`token ${GITHUB_TOKEN}`,'Content-Type':'application/json'},
+      body:JSON.stringify({files:{[GIST_FILENAME]:{content:JSON.stringify(records,null,2)}}})
+    });
+    return res.ok;
+  }catch(_e){}
+  return false
+}
 function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):[]}
 function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
 function nextSeq(records){let m=0;for(const r of records){const v=Number(r.seq)||0;if(v>m)m=v}return m+1}
