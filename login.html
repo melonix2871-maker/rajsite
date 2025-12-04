@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+</head>
+<body>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+  <img alt="Logo" width="36" height="36" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%230066ff'/%3E%3Ctext x='18' y='23' font-size='16' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
+  <span style="font-size:18px;font-weight:600">Admin Login</span>
+</div>
+<h1>Login</h1>
+<div id="status" style="margin-bottom:12px"></div>
+<button id="sign-in">Sign in</button>
+<button id="sign-out" style="display:none">Sign out</button>
+<div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
+<!-- Clerk integration: expects `window.__CONFIG.CLERK_PUBLISHABLE_KEY` to be provided at build time -->
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
+<script>
+async function initClerkLogin(){
+  try{
+    // Check if config.js loaded
+    if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
+      document.getElementById('status').textContent = '❌ Clerk not configured (config.js missing)';
+      return;
+    }
+
+    // Load Clerk SDK
+    await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
+    const clerk = Clerk;
+
+    // Async function to update UI based on session
+    async function updateUI(){
+      try{
+        const user = await (clerk.user?.get?.() || clerk.user);
+        if(user){
+          document.getElementById('status').textContent = '✅ Signed in as: ' + (user.username || user.email || 'User');
+          document.getElementById('sign-in').style.display='none';
+          document.getElementById('sign-out').style.display='';
+          // Redirect admin to admin.html
+          window.location.href='admin.html';
+        } else {
+          document.getElementById('status').textContent = 'Not signed in';
+          document.getElementById('sign-in').style.display='';
+          document.getElementById('sign-out').style.display='none';
+        }
+      }catch(_e){ 
+        document.getElementById('status').textContent='⚠️ Could not load user session';
+      }
+    }
+
+    // Sign-in button handler
+    document.getElementById('sign-in').addEventListener('click', async ()=>{
+      try {
+        // Try Clerk's sign-in modal
+        if(clerk.openSignIn){
+          clerk.openSignIn({ redirectUrl: window.location.origin + '/admin.html' });
+        } else {
+          // Fallback: redirect to Clerk hosted sign-in
+          window.location.href = 'https://clerk.com/sign-in?redirect_url=' + encodeURIComponent(window.location.origin + '/admin.html');
+        }
+      } catch(_e) {
+        alert('Sign-in failed. Please check your Clerk configuration.');
+      }
+    });
+
+    // Sign-out button handler
+    document.getElementById('sign-out').addEventListener('click', async ()=>{
+      try{ 
+        await clerk.signOut?.(); 
+        window.location.reload();
+      }catch(_e){ 
+        alert('Sign-out failed');
+      }
+    });
+
+    // Update UI on page load
+    updateUI();
+  }catch(e){ 
+    document.getElementById('status').textContent = '❌ Auth initialization error'; 
+    console.error('Clerk init error:', e);
+  }
+}
+
+// Initialize on page load
+initClerkLogin();
+</body>
+</html>

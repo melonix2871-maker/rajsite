@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin</title>
+</head>
+<body>
+<div id="auth-bar" style="display:flex;gap:12px;align-items:center">
+  <span id="auth-status"></span>
+  <button id="logout" style="display:none">Logout</button>
+</div>
+<h1>Add Record</h1>
+<form id="row-form">
+  <label>relid <input type="number" id="relid" required></label>
+  <label>prefix <input type="text" id="prefix" placeholder="app_" required></label>
+  <label>collection <input type="text" id="collection" required></label>
+  <label>metakey <input type="text" id="metakey" required></label>
+  <label>metavalue <input type="text" id="metavalue"></label>
+  <button type="submit">Create</button>
+</form>
+<div id="status" style="margin-top:12px"></div>
+<div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
+<div style="margin-top:8px;color: #a00">To persist changes to the Gist: export or copy JSON below then run the "Update Gist" workflow in GitHub Actions and paste the JSON into the `records_json` input.</div>
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
+<script>
+async function initClerkAdmin(){
+  try{
+    // Check if config.js loaded
+    if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
+      document.getElementById('status').textContent = '❌ Auth not configured';
+      return;
+    }
+
+    // Load Clerk
+    await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
+    const clerk = Clerk;
+
+    // Wait for user session
+    const user = await (clerk.user?.get?.() || clerk.user);
+
+    // Not signed in → redirect to login
+    if(!user){ 
+      window.location.href='login.html'; 
+      return; 
+    }
+
+    // Check if user is admin
+    const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
+    const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
+    const uid = user.id || user.userId || user.sub || '';
+    const uname = user.username || user.publicMetadata?.username || user.email || '';
+
+    if(String(uid) !== String(allowedId) || String(uname) !== String(allowedName)){
+      // Not an admin — redirect to public index
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Admin user confirmed
+    document.getElementById('auth-status').textContent = '✅ Signed in as: ' + (user.username || user.email || '');
+    document.getElementById('logout').style.display = '';
+    document.getElementById('logout').addEventListener('click', async ()=>{ 
+      try{ 
+        await clerk.signOut?.(); 
+      }catch(_e){} 
+      window.location.href='login.html'; 
+    });
+  }catch(_e){ 
+    document.getElementById('status').textContent = '❌ Auth error'; 
+    window.location.href='login.html'; 
+  }
+}
+
+// Initialize auth guard immediately
+initClerkAdmin();
+const KEY='records';
+async function cloudLoad(){try{const resp=await fetch('records.json',{cache:'no-cache'});if(resp.ok){return await resp.json()}}catch(_e){}return null}
+// Persist changes by calling a server-side endpoint which updates the Gist using PAT (server-side secret)
+async function cloudSave(records){
+  // Manual persistence mode: do not attempt to write Gist from client.
+  // Save to localStorage and instruct user to run Update Gist workflow.
+  try{
+    console.warn('cloudSave: client-side persistence disabled. Use Actions Update Gist.');
+    return false;
+  }catch(e){ return false; }
+}
+function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):[]}
+function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
+function nextId(records){return crypto.randomUUID()}
+
+document.getElementById('row-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const relid = Number(document.getElementById('relid').value.trim());
+  const prefix = document.getElementById('prefix').value.trim();
+  const collection = document.getElementById('collection').value.trim();
+  const metakey = document.getElementById('metakey').value.trim();
+  const metavalue = document.getElementById('metavalue').value.trim();
+  if(!Number.isFinite(relid) || !prefix || !collection || !metakey) return;
+  let records = await cloudLoad();
+  if(!records) records = load() || [];
+  const id = nextId(records);
+  const now = new Date().toISOString();
+  const rec = { id, relid, prefix, collection, metakey, metavalue, datecreated: now, dateupdated: now };
+  records.push(rec);
+  save(records);
+  await cloudSave(records);
+  document.getElementById('status').textContent = 'Saved.';
+  e.target.reset();
+});
+</script>
+</body>
+</html>
