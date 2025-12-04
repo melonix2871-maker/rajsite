@@ -21,15 +21,23 @@
   <label style="display:block;margin:8px 0">Password <input id="login-password" type="password" autocomplete="current-password"></label>
   <button type="submit">Sign In</button>
 </form>
+<div style="margin-top:24px">
+  <h2>Register</h2>
+  <form id="register-form" style="margin-top:12px;max-width:360px">
+    <label style="display:block;margin:8px 0">Username <input id="reg-username" autocomplete="username"></label>
+    <label style="display:block;margin:8px 0">Password <input id="reg-password" type="password" autocomplete="new-password"></label>
+    <label style="display:block;margin:8px 0">Confirm <input id="reg-confirm" type="password" autocomplete="new-password"></label>
+    <button type="submit">Create Account</button>
+  </form>
+  <div id="register-status" style="margin-top:8px"></div>
+</div>
 <div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
 <script src="config.js"></script>
 <script>
-function getCoreUrls(){
-  const ce = (window.__CONFIG && window.__CONFIG.coreengine) || {}
-  return { configUrl: ce.configUrl || '', dbUrl: ce.dbUrl || '' }
-}
+if(!window.__CONFIG || !window.__CONFIG.coreengine){ window.__CONFIG = { coreengine: { configUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/config.json', dbUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/db.json' } } }
+</script>
 <script>
-// Diagnostic: check config.js is served and show status
+function getCoreUrls(){ const ce = (window.__CONFIG && window.__CONFIG.coreengine) || {}; return { configUrl: ce.configUrl || '', dbUrl: ce.dbUrl || '' } }
 async function checkConfigJs(){
   const el = document.getElementById('config-status');
   if(!el) return;
@@ -65,6 +73,30 @@ document.getElementById('login-form').addEventListener('submit', (e)=>{
   const p = document.getElementById('login-password').value.trim()
   if(!u || !p){ document.getElementById('status').textContent = 'Enter username and password'; return }
   tryLogin(u,p)
+})
+function hex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('') }
+function randHex(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
+async function pbkdf2Hex(password, salt, iterations, length){ const enc = new TextEncoder(); const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']); const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: enc.encode(salt), iterations }, key, (length||32)*8); return hex(bits) }
+async function readRemote(){ try{ const { dbUrl } = getCoreUrls(); const r = await fetch(dbUrl, { cache:'no-store', mode:'cors', credentials:'omit' }); if(!r.ok) return []; const et=r.headers.get('etag'); if(et) localStorage.setItem('cedb_etag', et); const t = await r.text(); try{ return JSON.parse(t) }catch(_){ return [] } }catch(_e){ return [] } }
+async function writeRemote(records){ try{ const { dbUrl } = getCoreUrls(); const et=localStorage.getItem('cedb_etag')||''; const headers=Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}); const body=JSON.stringify(records,null,2); const r = await fetch(dbUrl, { method:'PUT', headers, body, mode:'cors', credentials:'omit' }); if(r.status===412){ document.getElementById('register-status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok){ document.getElementById('register-status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) localStorage.setItem('cedb_etag', newEt); return true }catch(_e){ document.getElementById('register-status').textContent='❌ Write error'; return false } }
+document.getElementById('register-form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const u = document.getElementById('reg-username').value.trim();
+  const p = document.getElementById('reg-password').value.trim();
+  const c = document.getElementById('reg-confirm').value.trim();
+  if(!u || !p || p!==c){ document.getElementById('register-status').textContent='Enter matching username/password'; return }
+  let list = await readRemote();
+  if(!Array.isArray(list)) list = [];
+  const exists = list.find(x => String(x.collection||'')==='users' && String(x.prefix||'')==='app_' && String(x.metakey||'')===u);
+  if(exists){ document.getElementById('register-status').textContent='❌ Username already exists'; return }
+  const salt = randHex(12);
+  const iterations = 100000;
+  const hash = await pbkdf2Hex(p, salt, iterations, 32);
+  const now = new Date().toISOString();
+  const rec = { id: crypto.randomUUID(), relid: 0, prefix: 'app_', collection: 'users', metakey: u, metavalue: JSON.stringify({ hash, salt, iterations }), datecreated: now, dateupdated: now };
+  list.push(rec);
+  const ok = await writeRemote(list);
+  document.getElementById('register-status').textContent = ok ? '✅ Registered. Sign in now.' : '❌ Registration failed';
 })
 </script>
 </body>
