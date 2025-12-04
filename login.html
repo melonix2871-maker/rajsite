@@ -12,79 +12,86 @@
 </div>
 <h1>Login</h1>
 <div id="status" style="margin-bottom:12px"></div>
-<button id="sign-in">Sign in</button>
-<button id="sign-out" style="display:none">Sign out</button>
+<div id="firebase-ui"></div>
 <div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
-<!-- Clerk integration: expects `window.__CONFIG.CLERK_PUBLISHABLE_KEY` to be provided at build time -->
+<!-- Firebase integration -->
 <script src="/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebaseui@6.1.0/dist/firebaseui.js"></script>
+<link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firebaseui@6.1.0/dist/firebaseui.css"/>
 <script>
-async function initClerkLogin(){
+async function initFirebaseLogin(){
   try{
     // Check if config.js loaded
-    if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
-      document.getElementById('status').textContent = '❌ Clerk not configured (config.js missing)';
+    if(!window.__CONFIG || !window.__CONFIG.firebase){
+      document.getElementById('status').textContent = '❌ Firebase not configured (config.js missing)';
       return;
     }
 
-    // Load Clerk SDK
-    await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
-    const clerk = Clerk;
+    // Initialize Firebase
+    const firebaseConfig = window.__CONFIG.firebase;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    // Async function to update UI based on session
-    async function updateUI(){
-      try{
-        const user = await (clerk.user?.get?.() || clerk.user);
-        if(user){
-          document.getElementById('status').textContent = '✅ Signed in as: ' + (user.username || user.email || 'User');
-          document.getElementById('sign-in').style.display='none';
-          document.getElementById('sign-out').style.display='';
-          // Redirect admin to admin.html
-          window.location.href='admin.html';
-        } else {
-          document.getElementById('status').textContent = 'Not signed in';
-          document.getElementById('sign-in').style.display='';
-          document.getElementById('sign-out').style.display='none';
-        }
-      }catch(_e){ 
-        document.getElementById('status').textContent='⚠️ Could not load user session';
-      }
+    // Initialize FirebaseUI
+    const ui = new firebaseui.auth.AuthUI(auth);
+    function isAdminUser(user){
+      if(!user) return false;
+      const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
+      const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
+      const uid = user.uid || '';
+      const uname = user.displayName || user.email || '';
+      return String(uid) === String(allowedId) || String(uname) === String(allowedName);
     }
 
-    // Sign-in button handler
-    document.getElementById('sign-in').addEventListener('click', async ()=>{
-      try {
-        // Try Clerk's sign-in modal
-        if(clerk.openSignIn){
-          clerk.openSignIn({ redirectUrl: window.location.origin + '/admin.html' });
-        } else {
-          // Fallback: redirect to Clerk hosted sign-in
-          window.location.href = 'https://clerk.com/sign-in?redirect_url=' + encodeURIComponent(window.location.origin + '/admin.html');
+    const uiConfig = {
+      callbacks: {
+        signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+          const user = authResult.user;
+          const dest = isAdminUser(user) ? 'admin.html' : 'index.html';
+          console.log('✅ User signed in:', user.uid, user.email, '→', dest);
+          window.location.href = dest;
+          return false;
+        },
+        uiShown: function() {
+          document.getElementById('status').textContent = 'Ready to sign in...';
         }
-      } catch(_e) {
-        alert('Sign-in failed. Please check your Clerk configuration.');
+      },
+      signInFlow: 'popup',
+      signInOptions: [
+        {
+          provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+          requireDisplayName: true
+        },
+        firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+        firebase.auth.GithubAuthProvider.PROVIDER_ID
+      ],
+      privacyPolicyUrl: '#'
+    };
+
+    // Check current auth state
+    auth.onAuthStateChanged(user => {
+      if(user){
+        // User is signed in
+        document.getElementById('status').textContent = '✅ Signed in as: ' + (user.displayName || user.email);
+        document.getElementById('firebase-ui').innerHTML = '<button onclick="firebase.auth().signOut(); location.reload();">Sign Out</button>';
+        // Redirect based on admin status
+        const dest = isAdminUser(user) ? 'admin.html' : 'index.html';
+        setTimeout(() => { window.location.href = dest; }, 500);
+      } else {
+        // User is not signed in, show FirebaseUI
+        document.getElementById('status').textContent = 'Not signed in';
+        ui.start('#firebase-ui', uiConfig);
       }
     });
-
-    // Sign-out button handler
-    document.getElementById('sign-out').addEventListener('click', async ()=>{
-      try{ 
-        await clerk.signOut?.(); 
-        window.location.reload();
-      }catch(_e){ 
-        alert('Sign-out failed');
-      }
-    });
-
-    // Update UI on page load
-    updateUI();
   }catch(e){ 
     document.getElementById('status').textContent = '❌ Auth initialization error'; 
-    console.error('Clerk init error:', e);
+    console.error('Firebase init error:', e);
   }
 }
 
 // Initialize on page load
-initClerkLogin();
+document.addEventListener('DOMContentLoaded', initFirebaseLogin);
 </body>
 </html>

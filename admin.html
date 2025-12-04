@@ -11,6 +11,11 @@
   <span id="auth-status"></span>
   <button id="logout" style="display:none">Logout</button>
 </div>
+<div id="gist-token" style="margin-top:8px;display:none">
+  <label>GitHub PAT (gist scope): <input type="password" id="gist-pat" placeholder="Paste PAT here"></label>
+  <button id="set-pat">Set Token</button>
+  <span id="token-status" style="margin-left:8px;color:#070"></span>
+</div>
 <h1>Add Record</h1>
 <form id="row-form">
   <label>relid <input type="number" id="relid" required></label>
@@ -24,22 +29,29 @@
 <div style="margin-top:12px"><a href="db.html">Open Data Table</a></div>
 <div style="margin-top:8px;color: #a00">To persist changes to the Gist: export or copy JSON below then run the "Update Gist" workflow in GitHub Actions and paste the JSON into the `records_json` input.</div>
 <script src="/config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
 <script>
-async function initClerkAdmin(){
+async function initFirebaseAdmin(){
   try{
     // Check if config.js loaded
-    if(!window.__CONFIG || !window.__CONFIG.CLERK_PUBLISHABLE_KEY){
+    if(!window.__CONFIG || !window.__CONFIG.firebase){
       document.getElementById('status').textContent = '❌ Auth not configured';
       return;
     }
 
-    // Load Clerk
-    await Clerk.load({ publishableKey: window.__CONFIG.CLERK_PUBLISHABLE_KEY });
-    const clerk = Clerk;
+    // Initialize Firebase
+    const firebaseConfig = window.__CONFIG.firebase;
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    // Wait for user session
-    const user = await (clerk.user?.get?.() || clerk.user);
+    // Wait for auth state
+    const user = await new Promise(resolve => {
+      const unsubscribe = auth.onAuthStateChanged(user => {
+        unsubscribe();
+        resolve(user);
+      });
+    });
 
     // Not signed in → redirect to login
     if(!user){ 
@@ -50,48 +62,88 @@ async function initClerkAdmin(){
     // Check if user is admin
     const allowedId = window.__CONFIG && window.__CONFIG.ADMIN_USER_ID;
     const allowedName = window.__CONFIG && window.__CONFIG.ADMIN_USERNAME;
-    const uid = user.id || user.userId || user.sub || '';
-    const uname = user.username || user.publicMetadata?.username || user.email || '';
+    const uid = user.uid || '';
+    const uname = user.displayName || user.email || '';
 
-    if(String(uid) !== String(allowedId) || String(uname) !== String(allowedName)){
+    if(String(uid) !== String(allowedId) && String(uname) !== String(allowedName)){
       // Not an admin — redirect to public index
       window.location.href = 'index.html';
       return;
     }
 
     // Admin user confirmed
-    document.getElementById('auth-status').textContent = '✅ Signed in as: ' + (user.username || user.email || '');
+    document.getElementById('auth-status').textContent = '✅ Signed in as: ' + (user.displayName || user.email || '');
     document.getElementById('logout').style.display = '';
     document.getElementById('logout').addEventListener('click', async ()=>{ 
       try{ 
-        await clerk.signOut?.(); 
+        await auth.signOut(); 
       }catch(_e){} 
       window.location.href='login.html'; 
     });
+    // Show PAT input for admin to allow saving to gist
+    document.getElementById('gist-token').style.display = '';
+    document.getElementById('set-pat').addEventListener('click', ()=> setGistTokenFromInput());
   }catch(_e){ 
     document.getElementById('status').textContent = '❌ Auth error'; 
+    console.error('Firebase admin init error:', _e);
     window.location.href='login.html'; 
   }
 }
 
 // Initialize auth guard immediately
-initClerkAdmin();
-const KEY='records';
-async function cloudLoad(){try{const resp=await fetch('records.json',{cache:'no-cache'});if(resp.ok){return await resp.json()}}catch(_e){}return null}
-// Persist changes by calling a server-side endpoint which updates the Gist using PAT (server-side secret)
-async function cloudSave(records){
-  // Manual persistence mode: do not attempt to write Gist from client.
-  // Save to localStorage and instruct user to run Update Gist workflow.
-  try{
-    console.warn('cloudSave: client-side persistence disabled. Use Actions Update Gist.');
-    return false;
-  }catch(e){ return false; }
-}
-function load(){const s=localStorage.getItem(KEY);return s?JSON.parse(s):[]}
-function save(records){localStorage.setItem(KEY,JSON.stringify(records))}
-function nextId(records){return crypto.randomUUID()}
+initFirebaseAdmin();
 
-document.getElementById('row-form').addEventListener('submit',async e=>{
+// In-memory PAT for Gist writes (never persisted)
+let gistToken = null;
+
+function setGistTokenFromInput(){
+  const v = document.getElementById('gist-pat').value.trim();
+  gistToken = v || null;
+  document.getElementById('token-status').textContent = gistToken ? 'Token set' : '';
+}
+
+async function cloudLoad(token){
+  try{
+    const gid = window.__CONFIG && window.__CONFIG.GIST_ID;
+    const fname = (window.__CONFIG && window.__CONFIG.GIST_FILENAME) || 'records.json';
+    if(!gid) return null;
+    const headers = token ? { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' } : { 'Accept': 'application/vnd.github.v3+json' };
+    const resp = await fetch(`https://api.github.com/gists/${gid}`, { headers });
+    if(!resp.ok) return null;
+    const data = await resp.json();
+    const content = data && data.files && data.files[fname] && data.files[fname].content;
+    if(!content) return [];
+    return JSON.parse(content);
+  }catch(e){ console.error('cloudLoad error', e); return null; }
+}
+
+async function cloudSave(records, token){
+  try{
+    const gid = window.__CONFIG && window.__CONFIG.GIST_ID;
+    const fname = (window.__CONFIG && window.__CONFIG.GIST_FILENAME) || 'records.json';
+    if(!gid) throw new Error('GIST_ID missing');
+    if(!token) throw new Error('Missing GitHub PAT for write');
+    const body = { files: {} };
+    body.files[fname] = { content: JSON.stringify(records, null, 2) };
+    const resp = await fetch(`https://api.github.com/gists/${gid}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if(!resp.ok){
+      const text = await resp.text();
+      console.error('Gist save failed', resp.status, text);
+      return false;
+    }
+    return true;
+  }catch(e){ console.error('cloudSave error', e); return false; }
+}
+
+function nextId(){ return crypto.randomUUID(); }
+
+document.getElementById('set-pat').addEventListener('click', (e)=>{ setGistTokenFromInput(); });
+
+document.getElementById('row-form').addEventListener('submit', async e=>{
   e.preventDefault();
   const relid = Number(document.getElementById('relid').value.trim());
   const prefix = document.getElementById('prefix').value.trim();
@@ -99,16 +151,19 @@ document.getElementById('row-form').addEventListener('submit',async e=>{
   const metakey = document.getElementById('metakey').value.trim();
   const metavalue = document.getElementById('metavalue').value.trim();
   if(!Number.isFinite(relid) || !prefix || !collection || !metakey) return;
-  let records = await cloudLoad();
-  if(!records) records = load() || [];
-  const id = nextId(records);
+  let records = await cloudLoad(gistToken);
+  if(!records) records = [];
+  const id = nextId();
   const now = new Date().toISOString();
   const rec = { id, relid, prefix, collection, metakey, metavalue, datecreated: now, dateupdated: now };
   records.push(rec);
-  save(records);
-  await cloudSave(records);
-  document.getElementById('status').textContent = 'Saved.';
-  e.target.reset();
+  const ok = await cloudSave(records, gistToken);
+  if(ok){
+    document.getElementById('status').textContent = 'Saved to Gist.';
+    e.target.reset();
+  } else {
+    document.getElementById('status').textContent = 'Save failed — ensure you set a valid GitHub PAT with gist scope.';
+  }
 });
 </script>
 </body>
