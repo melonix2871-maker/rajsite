@@ -5,13 +5,9 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -40,34 +36,15 @@ jobs:
           open('records.json','w').write(content)
           PY
 
-      - name: Prepare site directory
-        run: |
-          rm -rf _site
-          mkdir _site
-          cp *.html _site/ || true
-          cp *.js _site/ || true
-          cp *.md _site/ || true
-          cp *.json _site/ || true
-          cp records.json _site/records.json || true
-
       - name: Create runtime config (client-safe)
         env:
           CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
         run: |
-          echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > _site/config.js
+          echo "window.__CONFIG = { CLERK_PUBLISHABLE_KEY: '${CLERK_PUBLISHABLE_KEY}', ADMIN_USER_ID: '${{ secrets.ADMIN_USER_ID }}', ADMIN_USERNAME: '${{ secrets.ADMIN_USERNAME }}' };" > config.js
 
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: _site
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v3
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          exclude_assets: '.git,*.local,.gitignore,.github'
