@@ -21,9 +21,13 @@ if (fs.existsSync(envPath)) {
 }
 
 // Prefer process.env (CI) then .env.local
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || env.GITHUB_TOKEN || '';
+const PAT_TOKEN = process.env.PAT_TOKEN || env.PAT_TOKEN || '';
 const GIST_ID = process.env.GIST_ID || env.GIST_ID || '';
+const GIST_FILENAME = process.env.GIST_FILENAME || env.GIST_FILENAME || 'records.json';
 const CLERK_PUBLISHABLE_KEY = process.env.CLERK_PUBLISHABLE_KEY || env.CLERK_PUBLISHABLE_KEY || '';
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || env.ADMIN_USER_ID || '';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || env.ADMIN_USERNAME || '';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || env.ADMIN_EMAIL || '';
 const OUTPUT_DIR = process.env.OUTPUT_DIR || '';
 
 // Files to update
@@ -37,10 +41,13 @@ files.forEach(file => {
   let content = fs.readFileSync(filePath, 'utf-8');
 
   // Replace placeholders with values
-  content = content.replace(/const GITHUB_TOKEN = '.*?';/g, `const GITHUB_TOKEN = '${GITHUB_TOKEN}';`);
+  content = content.replace(/const GITHUB_TOKEN = '.*?';/g, `const GITHUB_TOKEN = '${PAT_TOKEN}';`);
   content = content.replace(/const GIST_ID = '.*?';/g, `const GIST_ID = '${GIST_ID}';`);
+  content = content.replace(/const GIST_FILENAME = '.*?';/g, `const GIST_FILENAME = '${GIST_FILENAME}';`);
   content = content.replace(/const CLERK_PUBLISHABLE_KEY = '.*?';/g, `const CLERK_PUBLISHABLE_KEY = '${CLERK_PUBLISHABLE_KEY}';`);
-  content = content.replace(/const ADMIN_EMAIL = '.*?';/g, `const ADMIN_EMAIL = '${process.env.ADMIN_EMAIL || env.ADMIN_EMAIL || ''}';`);
+  content = content.replace(/const ADMIN_USER_ID = '.*?';/g, `const ADMIN_USER_ID = '${ADMIN_USER_ID}';`);
+  content = content.replace(/const ADMIN_USERNAME = '.*?';/g, `const ADMIN_USERNAME = '${ADMIN_USERNAME}';`);
+  content = content.replace(/const ADMIN_EMAIL = '.*?';/g, `const ADMIN_EMAIL = '${ADMIN_EMAIL}';`);
 
   if (OUTPUT_DIR) {
     const outPath = path.join(baseDir, OUTPUT_DIR);
