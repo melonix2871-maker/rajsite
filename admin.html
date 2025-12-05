@@ -39,7 +39,7 @@ function requireSession(){
 function setAuthedUI(){ document.getElementById('auth-status').textContent='✅ Session active'; document.getElementById('logout').style.display=''; document.getElementById('logout').addEventListener('click',()=>{ try{ sessionStorage.removeItem('cedb_auth'); sessionStorage.removeItem('app_auth') }catch(_e){} window.location.href='login.html' }) }
 async function readRemote(){ try{ const {dbUrl}=getCoreUrls(); const auth=requireSession(); if(!auth) return []; const r=await fetch(dbUrl,{ cache:'no-store', mode:'cors', credentials:'omit', headers:{ 'Authorization':auth } }); if(!r.ok) return []; const et=r.headers.get('etag'); if(et) window.cedbEtag = et; const t=await r.text(); try{ return JSON.parse(t) }catch(_){ return [] } }catch(_e){ return [] } }
 async function writeRemote(records, opts){ try{ const {dbUrl}=getCoreUrls(); const auth=requireSession(); if(!auth) return false; const et=window.cedbEtag||''; const headers=Object.assign({ 'Content-Type':'application/json', 'Authorization':auth }, et?{ 'If-Match': et }: {}, (opts&&opts.allowEmpty)? { 'X-Allow-Empty-Write':'true' } : {}); const body=JSON.stringify(records,null,2); const r=await fetch(dbUrl,{ method:'PUT', headers, body, mode:'cors', credentials:'omit' }); if(r.status===412) { document.getElementById('status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok) { document.getElementById('status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) window.cedbEtag = newEt; return true }catch(_e){ document.getElementById('status').textContent='❌ Write error'; return false } }
-setAuthedUI();
+(function(){ if(requireSession()){ setAuthedUI() } })();
 
 function nextId(){ return crypto.randomUUID(); }
 
