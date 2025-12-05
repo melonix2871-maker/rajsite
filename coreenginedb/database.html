@@ -294,15 +294,19 @@
       try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
       if(!config.adapter) config.adapter = 'localStorage'
-      if(!config.http) config.http = { url: 'https://assets.antserver1.eu.org/db.json', method: 'PUT' }
+      config.snapshotUrl = 'https://assets.antserver1.eu.org/db.json'
+      if(!config.http) config.http = {}
+      config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
+      config.http.method = 'PUT'
       try{ const a = sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http) config.http={}; if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization = a } }catch(_){ }
     }
 
     class HttpAdapter{
-      constructor(opts){ this.url = opts.url||'https://assets.antserver1.eu.org/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
+      constructor(opts){ this.url = opts.url||'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
       async read(){ 
         const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); return base }).call(this)
-        const r = await fetch(this.url,{
+        const readUrl = (config && config.snapshotUrl) ? config.snapshotUrl : this.url
+        const r = await fetch(readUrl,{
           cache:'no-store',
           mode: 'cors',
           credentials: 'omit',
@@ -986,7 +990,7 @@
     async function loadApiKeys(){ try{ const r = await fetch('https://assets.antserver1.eu.org/config.json',{cache:'no-store'}); const j = r.ok? await r.json() : {}; const keys = (j&&j.apiKeys)||[]; const list=document.getElementById('apikeys-list'); list.innerHTML = keys.length? keys.map(k=>`<div style="padding:8px;border-bottom:1px solid #eee"><code>${k}</code></div>`).join('') : '<div class="muted">No API keys</div>'; }catch(_){ }
     }
     function randomToken(n=32){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
-    async function createApiKey(){ try{ const head = await fetch('https://assets.antserver1.eu.org/config.json',{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch('https://assets.antserver1.eu.org/config.json'); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch('https://assets.antserver1.eu.org/config.json',{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }
+    async function createApiKey(){ try{ const head = await fetch(WORKER_CONFIG_URL,{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch(WORKER_CONFIG_URL,{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }
 
     const WORKER_CONFIG_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/config.json'
     async function pbkdf2Hex(password, salt, iterations, length){ const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']); const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: new TextEncoder().encode(salt), iterations }, key, (length||32)*8); return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('') }
