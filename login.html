@@ -12,10 +12,6 @@
 </div>
 <h1>Login</h1>
 <div id="status" style="margin-bottom:12px"></div>
-<div style="margin-top:6px;font-size:13px">
-  <span id="config-status" style="color:#a00"></span>
-  <button id="recheck-config" onclick="checkConfigJs()" style="margin-left:8px;padding:4px 8px">Recheck config</button>
-</div>
 <form id="login-form" style="margin-top:12px;max-width:360px">
   <label style="display:block;margin:8px 0">Username <input id="login-username" autocomplete="username"></label>
   <label style="display:block;margin:8px 0">Password <input id="login-password" type="password" autocomplete="current-password"></label>
@@ -32,31 +28,12 @@
   <div id="register-status" style="margin-top:8px"></div>
 </div>
 <div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
-<script src="config.js"></script>
 <script>
-if(!window.__CONFIG || !window.__CONFIG.coreengine){ window.__CONFIG = { coreengine: { configUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/config.json', dbUrl: 'https://enginuecoresaas-enginuecore.uraoah.easypanel.host/json/db.json' } } }
+const WRITE_CONFIG_URL = 'https://assets.antserver1.eu.org/config.json'
+const WRITE_DB_URL = 'https://assets.antserver1.eu.org/db.json'
+function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_URL } }
 </script>
 <script>
-function getCoreUrls(){ const ce = (window.__CONFIG && window.__CONFIG.coreengine) || {}; return { configUrl: ce.configUrl || '', dbUrl: ce.dbUrl || '' } }
-async function checkConfigJs(){
-  const el = document.getElementById('config-status');
-  if(!el) return;
-  try{
-    const r = await fetch('config.js', { cache: 'no-store' });
-    if(r.ok){
-      el.textContent = '✅ config.js loaded';
-      el.style.color = '#070';
-    } else {
-      el.textContent = '❌ config.js not found (HTTP ' + r.status + ')';
-      el.style.color = '#a00';
-    }
-  }catch(e){
-    el.textContent = '❌ config.js fetch error';
-    el.style.color = '#a00';
-    console.error('checkConfigJs error', e);
-  }
-}
-checkConfigJs();
 async function tryLogin(username, password){
   try{
     const { dbUrl } = getCoreUrls()

@@ -14,14 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create runtime config (CoreEngineDB)
-        env:
-          REMOTE_DB_CONFIG: ${{ secrets.REMOTE_DB_CONFIG }}
-          REMOTE_DB_JSON: ${{ secrets.REMOTE_DB_JSON }}
+      - name: Skip runtime config (no config.js)
         run: |
-          echo "window.__CONFIG = { coreengine: { configUrl: '${REMOTE_DB_CONFIG}', dbUrl: '${REMOTE_DB_JSON}' } };" > config.js
-          echo "Generated config.js:"
-          cat config.js
+          echo "Using inlined endpoints; no config.js generated"
 
       - name: Prepare gh-pages deployment
         run: |
@@ -29,16 +24,12 @@ jobs:
           echo "=== Listing current directory ==="
           ls -la
           echo ""
-          echo "=== Checking config.js exists ==="
-          [ -f config.js ] && echo "config.js found" || echo "config.js NOT found"
-          echo ""
           echo "=== Copying files to /tmp/deploy ==="
           cp admin.html /tmp/deploy/
           cp index.html /tmp/deploy/
           cp login.html /tmp/deploy/
           cp oauth-callback.html /tmp/deploy/
           cp CNAME /tmp/deploy/
-          cp config.js /tmp/deploy/
           cp *.md /tmp/deploy/ 2>/dev/null || true
           echo ""
           echo "=== Files in /tmp/deploy ==="
