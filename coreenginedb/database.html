@@ -303,6 +303,7 @@
       async read(){ 
         const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); return base }).call(this)
         const readUrl = (config && config.snapshotUrl) ? config.snapshotUrl : this.url
+        if(readUrl && readUrl.indexOf('assets.antserver1.eu.org')!==-1){ try{ delete ah.Authorization }catch(_){} }
         const r = await fetch(readUrl,{
           cache:'no-store',
           mode: 'cors',
