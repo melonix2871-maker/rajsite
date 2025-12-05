@@ -279,6 +279,7 @@
     let config={}
     ;(function(){
       try{
+        if(sessionStorage.getItem('cedb_sso_disabled')==='1') return
         const app = JSON.parse(sessionStorage.getItem('app_auth')||'null')
         const cedb = sessionStorage.getItem('cedb_auth')||''
         if(app && String(app.role||'')==='superadmin' && String(app.username||'')==='kwlasing_superadmin' && cedb){
@@ -849,7 +850,17 @@
     document.getElementById('footer-selftest-run').addEventListener('click', async ()=>{ selfTestActive=true; selfTestResult=null; processes.selftest=true; renderStatus(); await runSelfTest(); processes.selftest=false; renderStatus() })
     document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('https://assets.antserver1.eu.org/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
     document.getElementById('footer-restore').addEventListener('click', async ()=>{ const t = localStorage.getItem('cedb_backup'); if(!t) return; try{ const j = JSON.parse(t); if(Array.isArray(j)){ db.data=j; await db.adapter.write(db.data); currentData = db.list(); renderCollections(currentData); renderRows() } }catch(_){ } })
-    document.getElementById('footer-logout').addEventListener('click', ()=>{ localStorage.removeItem('cedb_session'); localStorage.removeItem('cedb_authenticated'); location.reload() })
+    document.getElementById('footer-logout').addEventListener('click', ()=>{
+      try{
+        sessionStorage.removeItem('cedb_auth')
+        sessionStorage.removeItem('app_auth')
+        sessionStorage.setItem('cedb_sso_disabled','1')
+      }catch(_){}
+      localStorage.removeItem('cedb_session')
+      localStorage.removeItem('cedb_authenticated')
+      try{ document.cookie='csrf_token=; Max-Age=0; SameSite=Strict; Secure; path=/'; }catch(_){}
+      window.location.href = '/login.html'
+    })
     function openSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('hidden'); m.classList.add('open'); const sraw = localStorage.getItem('cedb_settings'); let s=null; try{ s=sraw?JSON.parse(sraw):null }catch(_){ s=null } document.getElementById('set-snapshot').value = (s&&s.snapshotUrl)||''; document.getElementById('set-write-url').value = (s&&s.writeUrl)||''; document.getElementById('set-write-method').value = (s&&s.writeMethod)||'PUT'; document.getElementById('set-headers').value = s&&s.headers? JSON.stringify(s.headers): '' }
     function closeSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('open'); m.classList.add('hidden') }
     function setMsg(t,kind){ const el=document.getElementById('set-msg'); el.style.display='block'; el.className='notice '+(kind==='error'?'notice-error':'notice-success'); el.textContent=t }
