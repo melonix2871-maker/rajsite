@@ -40,20 +40,21 @@ try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app 
 <script>
 async function tryLogin(username, password){
   try{
-    const listResp = await fetch(WRITE_DB_URL, { cache:'no-store', mode:'cors', credentials:'omit' })
-    if(!listResp.ok){ document.getElementById('status').textContent = '❌ Cannot read users'; return }
-    const rows = await listResp.json().catch(()=>[])
-    if(!Array.isArray(rows)){ document.getElementById('status').textContent = '❌ Invalid db.json'; return }
-    const su = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(username))
+    const base = new URL(WRITE_DB_URL, location.origin).origin
+    const suResp = await fetch(base + '/json/superuser?metakey=' + encodeURIComponent(username), { cache:'no-store', mode:'cors', credentials:'omit' })
+    let su=null; if(suResp.ok){ try{ su = await suResp.json() }catch(_){ su=null } }
     if(su && String(su.metavalue||'')===String(password)){
       sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username }))
       sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password)))
       window.location.href='admin.html'
       return
     }
-    const urec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='username' && String(r.metavalue||'')===String(username))
+    const usersResp = await fetch(base + '/json/users?username=' + encodeURIComponent(username), { cache:'no-store', mode:'cors', credentials:'omit' })
+    if(!usersResp.ok){ document.getElementById('status').textContent = '❌ Cannot read users'; return }
+    const urows = await usersResp.json().catch(()=>[])
+    const urec = Array.isArray(urows)? urows.find(r => String(r.metakey||'')==='username') : null
     if(urec){
-      const passrec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='password' && Number(r.relid||0)===Number(urec.relid||0))
+      const passrec = Array.isArray(urows)? urows.find(r => String(r.metakey||'')==='password' && Number(r.relid||0)===Number(urec.relid||0)) : null
       if(passrec){
         let ok = false
         try{

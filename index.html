@@ -14,7 +14,6 @@
   <button id="sign-out-btn" style="display:none">Sign out</button>
 </div>
 <script>
-const READ_DB_URL = 'https://assets.antserver1.eu.org/db.json'
 function getAppAuth(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } }
 function refreshAuthUI(){ const a=getAppAuth(); const echo=document.getElementById('user-echo'); const inBtn=document.getElementById('sign-in-btn'); const outBtn=document.getElementById('sign-out-btn'); if(a){ echo.textContent = 'Logged in as ' + (a.username||''); inBtn.style.display='none'; outBtn.style.display=''; } else { echo.textContent='Read-only mode'; inBtn.style.display=''; outBtn.style.display='none'; } }
 document.getElementById('sign-out-btn').addEventListener('click', ()=>{ try{ sessionStorage.removeItem('app_auth'); sessionStorage.removeItem('cedb_auth'); }catch(_e){} refreshAuthUI(); window.location.href='login.html' })
@@ -27,30 +26,7 @@ refreshAuthUI()
   <button id="save-btn" style="display: none;">Save</button>
   <span id="status" style="margin-left:12px"></span>
 </div>
-<script>
-async function fetchRemoteJson(){
-  try{
-    const url = READ_DB_URL
-    const auth = sessionStorage.getItem('cedb_auth') || ''
-    const headers = auth ? { 'Authorization': auth } : {}
-    const r = await fetch(url, { headers, cache:'no-store', mode:'cors', credentials:'omit' })
-    if(!r.ok){ document.getElementById('status').textContent = '0 rows'; return [] }
-    const t = await r.text()
-    try{ return JSON.parse(t) }catch(_){ return [] }
-  }catch(_e){ return [] }
-}
-</script>
-<script>
-// Firebase UI: show signed-in user details and sign-in/out
-// Simple banner; admin login is on login.html
-
-let CURRENT_ROWS = []
-async function refresh(){ const rows = await fetchRemoteJson(); CURRENT_ROWS = Array.isArray(rows)? rows : []; document.getElementById('status').textContent = `${CURRENT_ROWS.length} rows`; }
-async function save(){ try{ const url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; const head = await fetch(url,{ method:'HEAD' }); const et = head.headers.get('etag')||''; const r = await fetch(url,{ method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}), body: JSON.stringify(CURRENT_ROWS, null, 2) }); document.getElementById('status').textContent = r.ok? 'Saved' : 'Save failed'; }catch(_){ document.getElementById('status').textContent = 'Save error' } }
-//document.getElementById('refresh-btn').addEventListener('click', refresh)
-//document.getElementById('save-btn').addEventListener('click', save)
-//refresh()
-</script>
+ 
 <div id="id1-name" style="margin-top:8px"></div>
 </body>
 </html>

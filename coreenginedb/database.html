@@ -291,7 +291,7 @@
       try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
       config.adapter = 'http'
-      config.snapshotUrl = 'https://assets.antserver1.eu.org/db.json'
+      config.snapshotUrl = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
       if(!config.http) config.http = {}
       config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
       config.http.method = 'PUT'
@@ -613,7 +613,7 @@
       try{ const pr = queue && queue.pending; if(pr){ const t = JSON.parse(pr); if(Array.isArray(t)){ db.data = t; currentData = db.list() } } }catch(_){ }
       if(queue && queue.pending) { try{ await queue.flush() }catch(_){ } }
       if(!currentData.length){
-        const snapUrl = (config && config.snapshotUrl) || 'https://assets.antserver1.eu.org/db.json'
+        const snapUrl = (config && config.snapshotUrl) || 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
         try{ const r = await fetch(snapUrl,{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); await queue.flush(); currentData = await db.load(); connStatus='up' } else { connStatus='down' } } else { connStatus='down' } }catch(_){ connStatus='down' }
       }
       fPrefix.value = config.defaultPrefix
@@ -642,7 +642,7 @@
           const submitBtn = document.getElementById('login-submit'); if(submitBtn) submitBtn.disabled = true
           // Only allow superadmin from assets db.json
           try{
-            const resp = await fetch('https://assets.antserver1.eu.org/db.json',{ cache:'no-store' })
+            const resp = await fetch('https://coreenginedb.meoasis2014.workers.dev/json/db.json',{ cache:'no-store' })
             const rows = resp.ok? await resp.json() : []
             const su = Array.isArray(rows) ? rows.find(r=> String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(u)) : null
             if(!su || String(su.metavalue||'')!==String(p)){
@@ -825,7 +825,7 @@
     document.getElementById('footer-conflict-open').addEventListener('click', openConflict)
     document.getElementById('footer-flush').addEventListener('click', async ()=>{ if(queue) await queue.flush(); renderStatus() })
     document.getElementById('footer-selftest-run').addEventListener('click', async ()=>{ selfTestActive=true; selfTestResult=null; processes.selftest=true; renderStatus(); await runSelfTest(); processes.selftest=false; renderStatus() })
-    document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('https://assets.antserver1.eu.org/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
+    document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('https://coreenginedb.meoasis2014.workers.dev/json/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
     document.getElementById('footer-restore').addEventListener('click', async ()=>{ const j = (queue && queue.lastBefore) || null; if(!j) return; try{ if(Array.isArray(j)){ db.data=j; await db.adapter.write(db.data); currentData = db.list(); renderCollections(currentData); renderRows() } }catch(_){ } })
     document.getElementById('footer-logout').addEventListener('click', ()=>{
       try{
@@ -841,7 +841,7 @@
     function normalizeUrl(u){ if(!u) return ''; try{ const host = location.hostname; let v = u.trim(); if(v.startsWith('http://localhost') && host==='127.0.0.1') v = v.replace('http://localhost','http://127.0.0.1'); if(v.startsWith('http://127.0.0.1') && host==='localhost') v = v.replace('http://127.0.0.1','http://localhost'); return v }catch(_){ return u } }
     async function testSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); try{ if(snap){ const r = await fetch(snap,{cache:'no-store'}); if(!r.ok) { setMsg('Snapshot fetch failed','error'); return } } if(wurl){ const r2 = await fetch(wurl,{method:'HEAD', headers: hdrs}); if(!r2.ok){ setMsg('Write endpoint not reachable','error'); return } } setMsg('Connection OK','success'); connStatus='up'; renderStatus() }catch(_){ setMsg('Connection failed','error'); connStatus='down'; renderStatus() } }
     function saveSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); if(!config.http) config.http={}; config.snapshotUrl = snap||config.snapshotUrl||''; config.http.url = wurl||config.http.url||''; config.http.method = wmethod||'PUT'; config.http.headers = hdrs; setMsg('Saved','success') }
-    function resetSettings(){ document.getElementById('set-snapshot').value='https://assets.antserver1.eu.org/db.json'; document.getElementById('set-write-url').value='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; document.getElementById('set-write-method').value='PUT'; document.getElementById('set-headers').value=''; config.snapshotUrl = 'https://assets.antserver1.eu.org/db.json'; if(!config.http) config.http={}; config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method = 'PUT'; config.http.headers = {}; setMsg('Reset','success') }
+    function resetSettings(){ document.getElementById('set-snapshot').value='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; document.getElementById('set-write-url').value='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; document.getElementById('set-write-method').value='PUT'; document.getElementById('set-headers').value=''; config.snapshotUrl = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; if(!config.http) config.http={}; config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method = 'PUT'; config.http.headers = {}; setMsg('Reset','success') }
     document.getElementById('settings').addEventListener('click', openSettings)
     document.getElementById('set-close').addEventListener('click', closeSettings)
     document.getElementById('settings-close').addEventListener('click', closeSettings)
