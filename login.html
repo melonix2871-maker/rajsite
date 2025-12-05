@@ -47,7 +47,7 @@ async function tryLogin(username, password){
     const su = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(username))
     if(su && String(su.metavalue||'')===String(password)){
       sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username }))
-      sessionStorage.setItem('cedb_auth', 'Basic '+ btoa('admin:securepassword'))
+      sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password)))
       window.location.href='admin.html'
       return
     }
