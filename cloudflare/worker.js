@@ -4,7 +4,7 @@ export default {
     const h = new Headers()
     h.set('Access-Control-Allow-Origin', '*')
     h.set('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,OPTIONS')
-    h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, If-Match, X-Allow-Empty-Write, X-API-Key')
+    h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, If-Match, X-Allow-Empty-Write, X-API-Key, X-CSRF-Token')
     h.set('Access-Control-Expose-Headers', 'ETag')
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h })
 
@@ -64,6 +64,19 @@ export default {
       if (username === 'admin' && password === 'securepassword') return { ok: true, user: username }
       return { ok: false, reason: 'bad_credentials' }
     }
+    function getCookie(name){
+      const raw = req.headers.get('Cookie') || ''
+      const parts = raw.split(';').map(s=>s.trim())
+      const m = parts.find(s=>s.startsWith(name+'=')) || ''
+      return m ? decodeURIComponent(m.split('=')[1]||'') : ''
+    }
+    function checkCsrf(){
+      const header = req.headers.get('X-CSRF-Token') || ''
+      const cookie = getCookie('csrf_token') || ''
+      if(!header || !cookie) return { ok:false, reason:'missing_csrf' }
+      if(header !== cookie) return { ok:false, reason:'csrf_mismatch' }
+      return { ok:true }
+    }
     function timingSafeEqual(a, b) {
       if (!a || !b || a.length !== b.length) return false
       let r = 0
@@ -96,6 +109,11 @@ export default {
     if (!auth.ok) {
       h.set('Content-Type', 'application/json')
       return new Response(JSON.stringify({ error: auth.reason || 'unauthorized' }), { status: 401, headers: h })
+    }
+    const csrf = checkCsrf()
+    if(!csrf.ok){
+      h.set('Content-Type', 'application/json')
+      return new Response(JSON.stringify({ error: csrf.reason || 'forbidden' }), { status: 403, headers: h })
     }
     const current = await getText(key)
     const currentEtag = await sha256Hex(current)
