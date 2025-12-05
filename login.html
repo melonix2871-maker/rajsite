@@ -40,7 +40,7 @@ try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app 
 <script>
 async function tryLogin(username, password){
   try{
-    const listResp = await fetch('https://assets.antserver1.eu.org/db.json', { cache:'no-store', mode:'cors', credentials:'omit' })
+    const listResp = await fetch(WRITE_DB_URL, { cache:'no-store', mode:'cors', credentials:'omit' })
     if(!listResp.ok){ document.getElementById('status').textContent = '❌ Cannot read users'; return }
     const rows = await listResp.json().catch(()=>[])
     if(!Array.isArray(rows)){ document.getElementById('status').textContent = '❌ Invalid db.json'; return }
