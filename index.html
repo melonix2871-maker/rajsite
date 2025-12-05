@@ -15,6 +15,10 @@
 </div>
 <script>
 const READ_DB_URL = 'https://assets.antserver1.eu.org/db.json'
+function getAppAuth(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } }
+function refreshAuthUI(){ const a=getAppAuth(); const echo=document.getElementById('user-echo'); const inBtn=document.getElementById('sign-in-btn'); const outBtn=document.getElementById('sign-out-btn'); if(a){ echo.textContent = 'Logged in as ' + (a.username||''); inBtn.style.display='none'; outBtn.style.display=''; } else { echo.textContent='Read-only mode'; inBtn.style.display=''; outBtn.style.display='none'; } }
+document.getElementById('sign-out-btn').addEventListener('click', ()=>{ try{ sessionStorage.removeItem('app_auth'); sessionStorage.removeItem('cedb_auth'); }catch(_e){} refreshAuthUI(); window.location.href='login.html' })
+refreshAuthUI()
 </script>
 <div id="json-output" style="display:none"></div>
 <h1>Data</h1>
