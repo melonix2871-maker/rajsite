@@ -283,18 +283,14 @@
         const app = JSON.parse(sessionStorage.getItem('app_auth')||'null')
         const cedb = sessionStorage.getItem('cedb_auth')||''
         if(app && String(app.role||'')==='superadmin' && String(app.username||'')==='kwlasing_superadmin' && cedb){
-          const ttl = 3600*1000
-          const csrf = randomToken(32)
-          localStorage.setItem('cedb_session', JSON.stringify({ username: app.username, csrf, expiresAt: Date.now()+ttl }))
-          try{ document.cookie='csrf_token='+csrf+'; SameSite=Strict; Secure; path=/'; }catch(_){}
-          localStorage.setItem('cedb_authenticated','1')
+        const ttl = 3600*1000
         }
       }catch(_){ }
     })();
     async function loadConfig(){
       try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
-      if(!config.adapter) config.adapter = 'localStorage'
+      config.adapter = 'http'
       config.snapshotUrl = 'https://assets.antserver1.eu.org/db.json'
       if(!config.http) config.http = {}
       config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
@@ -321,11 +317,10 @@
       }
       async write(data, opts){ 
         const body = JSON.stringify(data,null,2); 
-        const et = window.cedbEtag||''; 
-        const tok = (function(){ try{ if(typeof csrfToken!=='undefined' && csrfToken) return csrfToken; const raw=localStorage.getItem('cedb_session'); if(!raw) return ''; const s=JSON.parse(raw); return s && s.csrf ? s.csrf : '' }catch(_){ return '' } })()
+        let et = ''
+        try{ const head = await fetch(this.url,{ method:'HEAD' }); et = head.headers.get('etag')||'' }catch(_){ et = '' }
         const hdrs = Object.assign({
-          'Content-Type':'application/json',
-          'X-CSRF-Token': tok
+          'Content-Type':'application/json'
         }, this.headers, et? {'If-Match': et} : {}, (opts&&opts.allowEmpty)? {'X-Allow-Empty-Write':'true'} : {}); 
         const r = await fetch(this.url,{
           method: this.method,
@@ -337,16 +332,11 @@
         if(r.status===412) throw new Error('precondition_failed'); 
         if(!r.ok) throw new Error('write_failed'); 
         const newEt = r.headers.get('etag'); 
-        if(newEt) localStorage.setItem('cedb_etag', newEt); 
+        if(newEt) window.cedbEtag = newEt; 
         return true 
       }
     }
 
-    class LocalStorageAdapter{
-      constructor(key){ this.key = key||'coreenginedb' }
-      async read(){ const t = localStorage.getItem(this.key); if(!t) return []; try{ return JSON.parse(t) }catch(_){ return [] } }
-      async write(data){ localStorage.setItem(this.key, JSON.stringify(data)); return true }
-    }
 
     class IndexedDBAdapter{
       constructor(name){ this.name = name||'coreenginedb'; this.store = 'records' }
@@ -385,32 +375,26 @@
     }
 
     class WriteQueue{
-      constructor(db){ this.db=db; this.pending=null; this.timer=null; this.attempts=0; const wq=config.writeQueue||{}; this.min=wq.intervalMin||3000; this.max=wq.intervalMax||5000; this.lockTtl=15000; this.maxAttempts=5 }
-      pushSnapshot(data){ this.pending = JSON.stringify(data); localStorage.setItem('cedb_queue', this.pending); this.schedule() }
+      constructor(db){ this.db=db; this.pending=null; this.timer=null; this.attempts=0; const wq=config.writeQueue||{}; this.min=wq.intervalMin||3000; this.max=wq.intervalMax||5000; this.locked=false; this.maxAttempts=5; this.lastBefore=null }
+      pushSnapshot(data){ this.pending = JSON.stringify(data); this.schedule() }
       schedule(){ if(this.timer) return; const delay = Math.floor(this.min + Math.random()*(this.max-this.min)); this.timer = setTimeout(()=>{ this.timer=null; this.flush() }, delay) }
       async flush(){ if(!this.pending) return; if(!this.acquireLock()) { this.schedule(); return }
         processes.flush=true; updateRefreshButton()
         try{
-          const prev = await this.db.adapter.read(); localStorage.setItem('cedb_backup', JSON.stringify(prev))
+          const prev = await this.db.adapter.read(); this.lastBefore = prev
           const target = JSON.parse(this.pending)
           const sumBefore = await sha256(JSON.stringify(target))
           const allowEmpty = Array.isArray(prev) && prev.length>0 && Array.isArray(target) && target.length===0
           await this.db.adapter.write(target, { allowEmpty })
           const after = await this.db.adapter.read(); const sumAfter = await sha256(JSON.stringify(after))
           if(sumBefore!==sumAfter) throw new Error('checksum_mismatch')
-          this.pending=null; localStorage.removeItem('cedb_queue'); this.attempts=0; this.releaseLock(); this.lastFlushAt=Date.now(); channel.postMessage({type:'flushed'})
+          this.pending=null; this.attempts=0; this.releaseLock(); this.lastFlushAt=Date.now(); channel.postMessage({type:'flushed'})
           processes.flush=false; updateRefreshButton()
-        } catch(err){ this.releaseLock(); this.attempts++; try{ const payload = { error: (err&&err.message)||String(err||'error'), pending: this.pending?JSON.parse(this.pending):[] }; localStorage.setItem('cedb_conflict', JSON.stringify(payload)); }catch(_){ } channel.postMessage({type:'conflict'}); if(this.attempts>=this.maxAttempts) { this.attempts=0 } this.schedule(); processes.flush=false; updateRefreshButton() }
+        } catch(err){ this.releaseLock(); this.attempts++; channel.postMessage({type:'conflict'}); if(this.attempts>=this.maxAttempts) { this.attempts=0 } this.schedule(); processes.flush=false; updateRefreshButton() }
       }
-      acquireLock(){ const k='cedb_lock'; const now=Date.now(); const raw = localStorage.getItem(k); let cur=null; try{ cur = raw?JSON.parse(raw):null }catch(_){ cur=null }
-        if(cur && cur.owner && cur.expiresAt && cur.expiresAt>now && cur.owner!==tabId) return false
-        localStorage.setItem(k, JSON.stringify({owner:tabId, expiresAt: now + this.lockTtl}))
-        return true
-      }
-      releaseLock(){ const k='cedb_lock'; const raw = localStorage.getItem(k); let cur=null; try{ cur = raw?JSON.parse(raw):null }catch(_){ cur=null }
-        if(cur && cur.owner===tabId) localStorage.removeItem(k)
-      }
-      loadPending(){ const t = localStorage.getItem('cedb_queue'); if(t){ this.pending=t; this.schedule() } }
+      acquireLock(){ if(this.locked) return false; this.locked=true; return true }
+      releaseLock(){ this.locked=false }
+      loadPending(){ /* no-op */ }
     }
 
     class DB{
@@ -514,8 +498,8 @@
     function updateRefreshButton(){ const btn = document.getElementById('refresh'); if(btn) btn.disabled = anyProcessRunning() }
     let outbox=[]
     let lastQueueId=null
-    function outboxLoad(){ try{ const t = localStorage.getItem('cedb_outbox'); outbox = t? JSON.parse(t):[] }catch(_){ outbox=[] } }
-    function outboxSave(){ try{ localStorage.setItem('cedb_outbox', JSON.stringify(outbox)) }catch(_){ } }
+    function outboxLoad(){ outbox = [] }
+    function outboxSave(){ }
     function setAppMsg(t, kind){ const el=document.getElementById('app-msg'); if(!el) return; el.style.display='block'; el.className='notice '+(kind==='error'?'notice-error':'notice-success'); el.textContent=t; setTimeout(()=>{ el.style.display='none' }, 2500) }
     function outboxPush(kind, payload){ const id = Date.now()+Math.random(); outbox.push({ id, kind, status:'queued', payload }); lastQueueId=id; outboxSave(); setAppMsg('Your data is processing (#'+Math.floor(id)+')','success'); return id }
     function outboxMarkAll(status){ outbox = outbox.map(x=>Object.assign(x,{status})); outboxSave() }
@@ -591,8 +575,8 @@
     }
 
     function renderStatus(){
-      const lockRaw = localStorage.getItem('cedb_lock'); let lock=null; try{ lock = lockRaw?JSON.parse(lockRaw):null }catch(_){ lock=null }
-      const pending = !!localStorage.getItem('cedb_queue')
+      const lock = queue && queue.locked ? { owner: tabId } : null
+      const pending = !!(queue && queue.pending)
       const last = queue && queue.lastFlushAt ? new Date(queue.lastFlushAt).toLocaleTimeString() : '—'
       const st = selfTestActive? (selfTestResult||'running') : 'disabled'
       statusEl.innerHTML = `
@@ -619,18 +603,16 @@
 
     async function init(){
       await loadConfig()
-      const sraw = localStorage.getItem('cedb_settings'); let settings=null; try{ settings = sraw? JSON.parse(sraw):null }catch(_){ settings=null }
-      if(settings){ if(settings.snapshotUrl) { if(!config.http) config.http={}; config.http.url = settings.snapshotUrl } if(settings.writeUrl){ if(!config.http) config.http={}; config.http.method = settings.writeMethod||'PUT'; config.http.headers = settings.headers||{}; config.http.url = settings.writeUrl } if(settings.snapshotUrl || settings.writeUrl){ config.adapter = 'http' } }
-      adapter = config.adapter==='http'? new HttpAdapter(config.http||{}) : (config.adapter==='indexedDB'? new IndexedDBAdapter('coreenginedb') : new LocalStorageAdapter('coreenginedb'))
+      adapter = new HttpAdapter(config.http||{})
       db = new DB(adapter)
       queue = new WriteQueue(db); db.queue = queue; queue.loadPending()
       outboxLoad()
       await maybeRequireLogin()
       currentData = await db.load()
-      try{ const pr = localStorage.getItem('cedb_queue'); if(pr){ const t = JSON.parse(pr); if(Array.isArray(t)){ db.data = t; currentData = db.list() } } }catch(_){ }
+      try{ const pr = queue && queue.pending; if(pr){ const t = JSON.parse(pr); if(Array.isArray(t)){ db.data = t; currentData = db.list() } } }catch(_){ }
       if(queue && queue.pending) { try{ await queue.flush() }catch(_){ } }
       if(!currentData.length){
-        const snapUrl = (settings&&settings.snapshotUrl) || (config.http&&config.http.url) || 'https://assets.antserver1.eu.org/db.json'
+        const snapUrl = (config && config.snapshotUrl) || 'https://assets.antserver1.eu.org/db.json'
         try{ const r = await fetch(snapUrl,{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); await queue.flush(); currentData = await db.load(); connStatus='up' } else { connStatus='down' } } else { connStatus='down' } }catch(_){ connStatus='down' }
       }
       fPrefix.value = config.defaultPrefix
@@ -646,11 +628,8 @@
     async function maybeRequireLogin(){
       const auth = config.auth||{}
       if(!auth.enabled) return
-      const authed = localStorage.getItem('cedb_authenticated')==='1'
-      if(authed){ const loginEl = document.getElementById('login'); if(loginEl){ loginEl.classList.add('hidden'); setTimeout(()=>{ loginEl.remove() }, 0) } return }
-      const sesRaw = localStorage.getItem('cedb_session'); let ses=null; try{ ses = sesRaw?JSON.parse(sesRaw):null }catch(_){ ses=null }
-      const now = Date.now()
-      if(ses && ses.expiresAt>now){ sessionUser = ses.username; csrfToken = ses.csrf; localStorage.setItem('cedb_authenticated','1'); return }
+      const hasAuth = !!(config && config.http && config.http.headers && config.http.headers.Authorization)
+      if(hasAuth){ const loginEl = document.getElementById('login'); if(loginEl){ loginEl.classList.add('hidden'); setTimeout(()=>{ loginEl.remove() }, 0) } return }
       const loginEl = document.getElementById('login'); loginEl.classList.remove('hidden'); document.body.style.overflow='hidden'
       return new Promise((resolve)=>{
         async function attempt(){
@@ -670,13 +649,10 @@
             }
           }catch(_){ setMsg('Login error','error'); if(submitBtn) submitBtn.disabled=false; return }
           sessionUser = u
-          csrfToken = randomToken(32)
-          const ttl = (auth.sessionTTL||3600)*1000
-          localStorage.setItem('cedb_session', JSON.stringify({ username:u, csrf:csrfToken, expiresAt: Date.now()+ttl }))
-          try{ sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username: u })) }catch(_){}
-          try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(u)+':'+String(p))) }catch(_){}
-          try{ document.cookie='csrf_token='+csrfToken+'; SameSite=Strict; Secure; path=/'; }catch(_){}
-          localStorage.setItem('cedb_authenticated','1')
+          csrfToken = null
+          try{ sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username: u })) }catch(_){ }
+          try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(u)+':'+String(p))) }catch(_){ }
+          if(!config.http) config.http={}; config.http.headers = Object.assign({}, config.http.headers||{}, { Authorization: 'Basic '+ btoa(String(u)+':'+String(p)) })
           setMsg('Login successful','success')
           loginEl.classList.add('hidden'); document.body.style.overflow='auto'
           setTimeout(()=>{ loginEl.remove() }, 100)
@@ -700,7 +676,7 @@
         }
       })
     }
-    function ensureAuth(){ const auth = config.auth||{}; if(!auth.enabled) return; const authed = localStorage.getItem('cedb_authenticated')==='1'; if(authed) return; const sesRaw = localStorage.getItem('cedb_session'); let ses=null; try{ ses = sesRaw?JSON.parse(sesRaw):null }catch(_){ } if(!ses || !ses.csrf){ throw new Error('unauthorized') } }
+    function ensureAuth(){ const auth = config.auth||{}; if(!auth.enabled) return; const hasAuth = !!(config && config.http && config.http.headers && config.http.headers.Authorization); if(!hasAuth) { throw new Error('unauthorized') } }
 
     function openCreate(){
       currentMode='create'
@@ -833,7 +809,7 @@
     async function openConflict(){
       const remote = await adapter.read()
       footerRemote.value = JSON.stringify(remote,null,2)
-      const pending = localStorage.getItem('cedb_queue')||''
+      const pending = (queue && queue.pending) || ''
       footerLocal.value = pending
       footerConflict.classList.remove('hidden')
       if(!editorRemote) editorRemote = makeEditor('footer-remote'); if(editorRemote){ editorRemote.setValue(footerRemote.value); validateEditor(editorRemote) }
@@ -841,40 +817,37 @@
     }
     function closeConflict(){ footerConflict.classList.add('hidden') }
     document.getElementById('footer-close').addEventListener('click', closeConflict)
-    document.getElementById('footer-use-local').addEventListener('click', async ()=>{ const t = editorLocal? editorLocal.getValue() : localStorage.getItem('cedb_queue'); if(!t) return; const target = JSON.parse(t); await adapter.write(target); localStorage.removeItem('cedb_queue'); if(queue) queue.pending=null; channel.postMessage({type:'flushed'}); closeConflict() })
-    document.getElementById('footer-use-remote').addEventListener('click', async ()=>{ const remote = await adapter.read(); db.data = Array.isArray(remote)?remote:[]; await db.adapter.write(db.data); localStorage.removeItem('cedb_queue'); if(queue) queue.pending=null; currentData = db.list(); renderCollections(currentData); renderRows(); closeConflict() })
+    document.getElementById('footer-use-local').addEventListener('click', async ()=>{ const t = editorLocal? editorLocal.getValue() : (queue && queue.pending); if(!t) return; const target = JSON.parse(t); await adapter.write(target); if(queue) queue.pending=null; channel.postMessage({type:'flushed'}); closeConflict() })
+    document.getElementById('footer-use-remote').addEventListener('click', async ()=>{ const remote = await adapter.read(); db.data = Array.isArray(remote)?remote:[]; await db.adapter.write(db.data); if(queue) queue.pending=null; currentData = db.list(); renderCollections(currentData); renderRows(); closeConflict() })
     function mergeArrays(local, remote){ const byId={}; remote.forEach(r=>{ byId[r.id]=r }); local.forEach(l=>{ const r = byId[l.id]; if(!r){ byId[l.id]=l } else { const ld = new Date(l.updateddate||l.createddate||0).getTime(); const rd = new Date(r.updateddate||r.createddate||0).getTime(); byId[l.id] = ld>=rd?l:r } }); return Object.values(byId).sort((a,b)=>(a.id||0)-(b.id||0)) }
-    document.getElementById('footer-merge').addEventListener('click', async ()=>{ const t = editorLocal? editorLocal.getValue() : localStorage.getItem('cedb_queue'); const local = t?JSON.parse(t):[]; const remote = editorRemote? JSON.parse(editorRemote.getValue()) : await adapter.read(); const merged = mergeArrays(local, Array.isArray(remote)?remote:[]); await adapter.write(merged); localStorage.removeItem('cedb_queue'); if(queue) queue.pending=null; channel.postMessage({type:'flushed'}); closeConflict() })
+    document.getElementById('footer-merge').addEventListener('click', async ()=>{ const t = editorLocal? editorLocal.getValue() : (queue && queue.pending) || ''; const local = t?JSON.parse(t):[]; const remote = editorRemote? JSON.parse(editorRemote.getValue()) : await adapter.read(); const merged = mergeArrays(local, Array.isArray(remote)?remote:[]); await adapter.write(merged); if(queue) queue.pending=null; channel.postMessage({type:'flushed'}); closeConflict() })
     document.getElementById('footer-conflict-open').addEventListener('click', openConflict)
     document.getElementById('footer-flush').addEventListener('click', async ()=>{ if(queue) await queue.flush(); renderStatus() })
     document.getElementById('footer-selftest-run').addEventListener('click', async ()=>{ selfTestActive=true; selfTestResult=null; processes.selftest=true; renderStatus(); await runSelfTest(); processes.selftest=false; renderStatus() })
     document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('https://assets.antserver1.eu.org/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
-    document.getElementById('footer-restore').addEventListener('click', async ()=>{ const t = localStorage.getItem('cedb_backup'); if(!t) return; try{ const j = JSON.parse(t); if(Array.isArray(j)){ db.data=j; await db.adapter.write(db.data); currentData = db.list(); renderCollections(currentData); renderRows() } }catch(_){ } })
+    document.getElementById('footer-restore').addEventListener('click', async ()=>{ const j = (queue && queue.lastBefore) || null; if(!j) return; try{ if(Array.isArray(j)){ db.data=j; await db.adapter.write(db.data); currentData = db.list(); renderCollections(currentData); renderRows() } }catch(_){ } })
     document.getElementById('footer-logout').addEventListener('click', ()=>{
       try{
         sessionStorage.removeItem('cedb_auth')
         sessionStorage.removeItem('app_auth')
         sessionStorage.setItem('cedb_sso_disabled','1')
-      }catch(_){}
-      localStorage.removeItem('cedb_session')
-      localStorage.removeItem('cedb_authenticated')
-      try{ document.cookie='csrf_token=; Max-Age=0; SameSite=Strict; Secure; path=/'; }catch(_){}
+      }catch(_){ }
       window.location.href = '/login.html'
     })
-    function openSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('hidden'); m.classList.add('open'); const sraw = localStorage.getItem('cedb_settings'); let s=null; try{ s=sraw?JSON.parse(sraw):null }catch(_){ s=null } document.getElementById('set-snapshot').value = (s&&s.snapshotUrl)||''; document.getElementById('set-write-url').value = (s&&s.writeUrl)||''; document.getElementById('set-write-method').value = (s&&s.writeMethod)||'PUT'; document.getElementById('set-headers').value = s&&s.headers? JSON.stringify(s.headers): '' }
+    function openSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('hidden'); m.classList.add('open'); document.getElementById('set-snapshot').value = (config&&config.snapshotUrl)||''; document.getElementById('set-write-url').value = (config&&config.http&&config.http.url)||''; document.getElementById('set-write-method').value = (config&&config.http&&config.http.method)||'PUT'; document.getElementById('set-headers').value = (config&&config.http&&config.http.headers)? JSON.stringify(config.http.headers): '' }
     function closeSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('open'); m.classList.add('hidden') }
     function setMsg(t,kind){ const el=document.getElementById('set-msg'); el.style.display='block'; el.className='notice '+(kind==='error'?'notice-error':'notice-success'); el.textContent=t }
     function normalizeUrl(u){ if(!u) return ''; try{ const host = location.hostname; let v = u.trim(); if(v.startsWith('http://localhost') && host==='127.0.0.1') v = v.replace('http://localhost','http://127.0.0.1'); if(v.startsWith('http://127.0.0.1') && host==='localhost') v = v.replace('http://127.0.0.1','http://localhost'); return v }catch(_){ return u } }
-    async function testSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); try{ if(snap){ const r = await fetch(snap,{cache:'no-store'}); if(!r.ok) { setMsg('Snapshot fetch failed','error'); return } } if(wurl){ let r2; try{ r2 = await fetch(wurl,{method:'HEAD', headers: hdrs}); }catch(_){ const alt = normalizeUrl(wurl); r2 = await fetch(alt,{method:'HEAD', headers: hdrs}); } if(!r2.ok){ setMsg('Write endpoint not reachable','error'); return } } setMsg('Connection OK','success'); connStatus='up'; renderStatus() }catch(_){ setMsg('Connection failed','error'); connStatus='down'; renderStatus() } }
-    function saveSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); const s={ snapshotUrl: snap||'', writeUrl: wurl||'', writeMethod: wmethod||'PUT', headers: hdrs }; localStorage.setItem('cedb_settings', JSON.stringify(s)); setMsg('Saved','success') }
-    function resetSettings(){ localStorage.removeItem('cedb_settings'); document.getElementById('set-snapshot').value=''; document.getElementById('set-write-url').value=''; document.getElementById('set-write-method').value='PUT'; document.getElementById('set-headers').value=''; setMsg('Reset','success') }
+    async function testSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); try{ if(snap){ const r = await fetch(snap,{cache:'no-store'}); if(!r.ok) { setMsg('Snapshot fetch failed','error'); return } } if(wurl){ const r2 = await fetch(wurl,{method:'HEAD', headers: hdrs}); if(!r2.ok){ setMsg('Write endpoint not reachable','error'); return } } setMsg('Connection OK','success'); connStatus='up'; renderStatus() }catch(_){ setMsg('Connection failed','error'); connStatus='down'; renderStatus() } }
+    function saveSettings(){ let snap = document.getElementById('set-snapshot').value.trim(); let wurl = document.getElementById('set-write-url').value.trim(); const wmethod = document.getElementById('set-write-method').value.trim(); let hdrs={}; try{ const raw=document.getElementById('set-headers').value.trim(); hdrs = raw? JSON.parse(raw):{} }catch(_){ setMsg('Invalid headers JSON','error'); return } snap = normalizeUrl(snap); wurl = normalizeUrl(wurl); if(!config.http) config.http={}; config.snapshotUrl = snap||config.snapshotUrl||''; config.http.url = wurl||config.http.url||''; config.http.method = wmethod||'PUT'; config.http.headers = hdrs; setMsg('Saved','success') }
+    function resetSettings(){ document.getElementById('set-snapshot').value='https://assets.antserver1.eu.org/db.json'; document.getElementById('set-write-url').value='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; document.getElementById('set-write-method').value='PUT'; document.getElementById('set-headers').value=''; config.snapshotUrl = 'https://assets.antserver1.eu.org/db.json'; if(!config.http) config.http={}; config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method = 'PUT'; config.http.headers = {}; setMsg('Reset','success') }
     document.getElementById('settings').addEventListener('click', openSettings)
     document.getElementById('set-close').addEventListener('click', closeSettings)
     document.getElementById('settings-close').addEventListener('click', closeSettings)
     document.getElementById('set-test').addEventListener('click', testSettings)
     document.getElementById('set-save').addEventListener('click', saveSettings)
     document.getElementById('set-reset').addEventListener('click', resetSettings)
-    function activityBase(){ const sraw = localStorage.getItem('cedb_settings'); let s=null; try{ s=sraw?JSON.parse(sraw):null }catch(_){ } let w = s&&s.writeUrl; if(!w){ const f = document.getElementById('set-write-url'); if(f && f.value) w = f.value.trim() } if(!w && config && config.http && config.http.url){ w = config.http.url } if(!w) return null; try{ const u = new URL(w, location.origin); return u.origin }catch(_){ return null } }
+    function activityBase(){ let w = ''; const f = document.getElementById('set-write-url'); if(f && f.value) w = f.value.trim(); if(!w && config && config.http && config.http.url){ w = config.http.url } if(!w) return null; try{ const u = new URL(w, location.origin); return u.origin }catch(_){ return null } }
     async function openActivity(){ const d = document.getElementById('activity-drawer'); d.classList.remove('hidden'); d.classList.add('open'); await refreshActivity() }
     function closeActivity(){ const d = document.getElementById('activity-drawer'); d.classList.remove('open'); d.classList.add('hidden') }
         async function refreshActivity(){ 
