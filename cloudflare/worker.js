@@ -10,7 +10,7 @@ export default {
     } else {
       h.set('Access-Control-Allow-Origin', '*')
     }
-    h.set('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,OPTIONS')
+    h.set('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,PATCH,OPTIONS,DELETE')
     h.set('Access-Control-Allow-Headers', 'Content-Type, content-type, Authorization, authorization, If-Match, if-match, X-Allow-Empty-Write, x-allow-empty-write, X-API-Key, x-api-key, X-CSRF-Token, x-csrf-token')
     h.set('Access-Control-Expose-Headers', 'ETag')
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h })
@@ -156,7 +156,7 @@ export default {
       await logEvent('HEAD', url.pathname, 200, 0, '', '')
       return new Response(null, { status: 200, headers: h })
     }
-    if (req.method !== 'PUT' && req.method !== 'POST') return new Response('', { status: 405, headers: h })
+    if (req.method !== 'PUT' && req.method !== 'POST' && req.method !== 'PATCH') return new Response('', { status: 405, headers: h })
 
     const auth = await checkAuth()
     if (!auth.ok) {
@@ -173,7 +173,12 @@ export default {
     const current = await getText(key)
     const currentEtag = await sha256Hex(current)
     const ifMatch = req.headers.get('If-Match') || ''
-    if (ifMatch && ifMatch !== currentEtag) {
+    if (!ifMatch) {
+      h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 400, 0, String(auth.user||''), 'missing_if_match')
+      return new Response('{"error":"missing_if_match"}', { status: 400, headers: h })
+    }
+    if (ifMatch !== currentEtag) {
       h.set('Content-Type', 'application/json')
       await logEvent(req.method, url.pathname, 412, 0, String(auth.user||''), 'precondition_failed')
       return new Response('{"error":"precondition_failed"}', { status: 412, headers: h })
