@@ -38,12 +38,27 @@ if(sessionStorage.getItem('cedb_auth')){ window.location.href='admin.html' }
 <script>
 async function tryLogin(username, password){
   try{
-    const { dbUrl } = getCoreUrls()
-    if(!dbUrl){ document.getElementById('status').textContent = '❌ Missing CoreEngineDB URL'; return }
-    const auth = 'Basic ' + btoa(String(username)+':'+String(password))
-    const r = await fetch(dbUrl, { method:'HEAD', headers: { 'Authorization': auth }, mode:'cors', credentials:'omit' })
-    if(r.ok){ sessionStorage.setItem('cedb_auth', auth); window.location.href='admin.html'; }
-    else { document.getElementById('status').textContent = '❌ Invalid credentials'; }
+    const listResp = await fetch('https://assets.antserver1.eu.org/db.json', { cache:'no-store', mode:'cors', credentials:'omit' })
+    if(!listResp.ok){ document.getElementById('status').textContent = '❌ Cannot read users'; return }
+    const rows = await listResp.json().catch(()=>[])
+    if(!Array.isArray(rows)){ document.getElementById('status').textContent = '❌ Invalid db.json'; return }
+    const su = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(username))
+    if(su && String(su.metavalue||'')===String(password)){
+      sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username }))
+      sessionStorage.setItem('cedb_auth', 'Basic '+ btoa('admin:securepassword'))
+      window.location.href='admin.html'
+      return
+    }
+    const urec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='username' && String(r.metavalue||'')===String(username))
+    if(urec){
+      const passrec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='password' && Number(r.relid||0)===Number(urec.relid||0))
+      if(passrec && String(passrec.metavalue||'')===String(password)){
+        sessionStorage.setItem('app_auth', JSON.stringify({ role:'user', username, relid:Number(urec.relid||0) }))
+        window.location.href='index.html'
+        return
+      }
+    }
+    document.getElementById('status').textContent = '❌ Invalid credentials'
   }catch(e){ document.getElementById('status').textContent = '❌ Login error' }
 }
 document.getElementById('login-form').addEventListener('submit', (e)=>{
@@ -64,18 +79,23 @@ document.getElementById('register-form').addEventListener('submit', async (e)=>{
   const p = document.getElementById('reg-password').value.trim();
   const c = document.getElementById('reg-confirm').value.trim();
   if(!u || !p || p!==c){ document.getElementById('register-status').textContent='Enter matching username/password'; return }
-  let cfg = await readConfig();
-  if(!cfg || typeof cfg !== 'object') cfg = {};
-  if(!cfg.auth) cfg.auth = { enabled: true, salt: 'coreenginedb', users: [] };
-  if(!Array.isArray(cfg.auth.users)) cfg.auth.users = [];
-  const exists = cfg.auth.users.find(x => String(x.username||'')===u);
-  if(exists){ document.getElementById('register-status').textContent='❌ Username already exists'; return }
-  const salt = randHex(12);
-  const iterations = 100000;
-  const hash = await pbkdf2Hex(p, salt, iterations, 32);
-  cfg.auth.users.push({ username: u, iterations, salt, hash });
-  const ok = await writeConfig(cfg);
-  document.getElementById('register-status').textContent = ok ? '✅ Registered. Sign in now.' : '❌ Registration failed';
+  try{
+    // read current db via Worker (to keep ETag for write)
+    const head = await fetch(WRITE_DB_URL, { method:'HEAD' })
+    const et = head.headers.get('etag')||''
+    const rows = await (await fetch(WRITE_DB_URL)).json().catch(()=>[])
+    if(!Array.isArray(rows)) { document.getElementById('register-status').textContent='❌ Invalid db.json'; return }
+    const exists = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='username' && String(r.metavalue||'')===u)
+    if(exists){ document.getElementById('register-status').textContent='❌ Username already exists'; return }
+    const maxRel = rows.reduce((m,r)=> (String(r.prefix||'')==='app_' && String(r.collection||'')==='users' ? Math.max(m, Number(r.relid||0)) : m), 100)
+    const relid = Number(maxRel)+1
+    const now = new Date().toISOString()
+    rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'username', metavalue:u, createddate: now, updateddate: now })
+    rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'password', metavalue:p, createddate: now, updateddate: now })
+    const r = await fetch(WRITE_DB_URL, { method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}), body: JSON.stringify(rows, null, 2) })
+    if(!r.ok){ document.getElementById('register-status').textContent='❌ Registration failed'; return }
+    document.getElementById('register-status').textContent='✅ Registered. Sign in now.'
+  }catch(_e){ document.getElementById('register-status').textContent='❌ Registration error' }
 })
 </script>
 </body>
