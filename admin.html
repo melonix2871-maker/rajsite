@@ -23,7 +23,7 @@
 <div id="status" style="margin-top:12px"></div>
 <div style="margin-top:8px;color:#333">CoreEngineDB-backed admin. Changes are persisted to the remote JSON.</div>
 <script>
-const WRITE_DB_URL = 'https://assets.antserver1.eu.org/db.json'
+const WRITE_DB_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
 function getCoreUrls(){ return { dbUrl: WRITE_DB_URL } }
 function requireSession(){ const auth=sessionStorage.getItem('cedb_auth')||''; if(!auth){ window.location.href='login.html'; return null } return auth }
 function setAuthedUI(){ document.getElementById('auth-status').textContent='✅ Session active'; document.getElementById('logout').style.display=''; document.getElementById('logout').addEventListener('click',()=>{ try{ sessionStorage.removeItem('cedb_auth') }catch(_e){} window.location.href='login.html' }) }

@@ -29,8 +29,8 @@
 </div>
 <div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
 <script>
-const WRITE_CONFIG_URL = 'https://assets.antserver1.eu.org/config.json'
-const WRITE_DB_URL = 'https://assets.antserver1.eu.org/db.json'
+const WRITE_CONFIG_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/config.json'
+const WRITE_DB_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
 function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_URL } }
 // Redirect away if already logged in
 if(sessionStorage.getItem('cedb_auth')){ window.location.href='admin.html' }
