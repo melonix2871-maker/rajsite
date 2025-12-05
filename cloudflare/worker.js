@@ -17,8 +17,51 @@ export default {
 
     const isCfg = url.pathname === '/json/config.json'
     const isDb = url.pathname === '/json/db.json'
-    if (!isCfg && !isDb) return new Response('', { status: 404, headers: h })
-    const key = isCfg ? 'config.json' : 'db.json'
+    const isActivity = url.pathname === '/activity'
+    const key = isCfg ? 'config.json' : (isDb ? 'db.json' : '')
+
+    async function logEvent(method, path, status, size, user, reason) {
+      try {
+        const ts = new Date().toISOString()
+        const day = ts.slice(0, 10)
+        const id = crypto.randomUUID()
+        const payload = {
+          ts, method, path, status, size: typeof size === 'number' ? size : 0,
+          user: user || '', ip: req.headers.get('cf-connecting-ip') || '', reason: reason || ''
+        }
+        const actKey = `activity/${day}/${id}.json`
+        await env.COREENGINEDB.put(actKey, JSON.stringify(payload), { httpMetadata: { contentType: 'application/json' } })
+      } catch (_e) { /* ignore logging errors */ }
+    }
+
+    // Activity listing endpoint
+    if (isActivity) {
+      try {
+        const day = (url.searchParams.get('day') || new Date().toISOString().slice(0, 10))
+        const limit = Math.max(1, Math.min(1000, parseInt(url.searchParams.get('limit') || '500')))
+        const prefix = `activity/${day}/`
+        const listed = await env.COREENGINEDB.list({ prefix, limit })
+        const out = []
+        for (const obj of (listed && listed.objects) || []) {
+          try {
+            const r = await env.COREENGINEDB.get(obj.key)
+            const t = r ? await r.text() : ''
+            const j = t ? JSON.parse(t) : null
+            if (j) out.push(j)
+          } catch (_e) { /* skip */ }
+        }
+        out.sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')))
+        h.set('Content-Type', 'application/json')
+        await logEvent('GET', '/activity', 200, out.length, '', '')
+        return new Response(JSON.stringify(out), { status: 200, headers: h })
+      } catch (err) {
+        h.set('Content-Type', 'application/json')
+        await logEvent('GET', '/activity', 500, 0, '', 'activity_error')
+        return new Response(JSON.stringify({ error: 'activity_error' }), { status: 500, headers: h })
+      }
+    }
+
+    if (!isCfg && !isDb) { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
 
     async function getText(k) {
       const obj = await env.COREENGINEDB.get(k)
@@ -103,12 +146,14 @@ export default {
       const et = await sha256Hex(t)
       h.set('Content-Type', 'application/json')
       h.set('ETag', et)
+      await logEvent('GET', url.pathname, 200, (t && t.length) || 0, '', '')
       return new Response(t, { status: 200, headers: h })
     }
     if (req.method === 'HEAD') {
       const t = await getText(key)
       const et = await sha256Hex(t)
       h.set('ETag', et)
+      await logEvent('HEAD', url.pathname, 200, 0, '', '')
       return new Response(null, { status: 200, headers: h })
     }
     if (req.method !== 'PUT' && req.method !== 'POST') return new Response('', { status: 405, headers: h })
@@ -116,11 +161,13 @@ export default {
     const auth = await checkAuth()
     if (!auth.ok) {
       h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 401, 0, '', String(auth.reason || 'unauthorized'))
       return new Response(JSON.stringify({ error: auth.reason || 'unauthorized' }), { status: 401, headers: h })
     }
     const csrf = checkCsrf()
     if(!csrf.ok){
       h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 403, 0, String(auth.user||''), String(csrf.reason || 'forbidden'))
       return new Response(JSON.stringify({ error: csrf.reason || 'forbidden' }), { status: 403, headers: h })
     }
     const current = await getText(key)
@@ -128,20 +175,24 @@ export default {
     const ifMatch = req.headers.get('If-Match') || ''
     if (ifMatch && ifMatch !== currentEtag) {
       h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 412, 0, String(auth.user||''), 'precondition_failed')
       return new Response('{"error":"precondition_failed"}', { status: 412, headers: h })
     }
     const body = await req.text()
     let parsed
     try { parsed = JSON.parse(body || (isCfg ? '{}' : '[]')) } catch (_e) {
       h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'invalid_json')
       return new Response('{"error":"invalid_json"}', { status: 400, headers: h })
     }
     if (isDb && !Array.isArray(parsed)) {
       h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'expected_array')
       return new Response('{"error":"expected_array"}', { status: 400, headers: h })
     }
     if (isCfg && typeof parsed !== 'object') {
       h.set('Content-Type', 'application/json')
+      await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'expected_object')
       return new Response('{"error":"expected_object"}', { status: 400, headers: h })
     }
     let allowEmpty = (req.headers.get('X-Allow-Empty-Write') || '').toLowerCase() === 'true'
@@ -151,6 +202,7 @@ export default {
         const after = Array.isArray(parsed) ? parsed.length : 0
         if (before > 0 && after === 0 && !allowEmpty) {
           h.set('Content-Type', 'application/json')
+          await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'empty_write_denied')
           return new Response('{"error":"empty_write_denied"}', { status: 400, headers: h })
         }
       }
@@ -160,6 +212,7 @@ export default {
     const newEtag = await sha256Hex(pretty)
     h.set('Content-Type', 'application/json')
     h.set('ETag', newEtag)
+    await logEvent(req.method, url.pathname, 200, (pretty && pretty.length) || 0, String(auth.user||''), '')
     return new Response('{"ok":true}', { status: 200, headers: h })
   }
 }
