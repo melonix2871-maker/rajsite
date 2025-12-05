@@ -276,6 +276,7 @@
   </div>
   <script>
     let config={}
+    (function(){ try{ const app=JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(!app || String(app.role||'')!=='superadmin'){ window.location.href='login.html'; } }catch(_){ window.location.href='login.html'; } })();
     async function loadConfig(){
       try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
