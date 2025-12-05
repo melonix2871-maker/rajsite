@@ -9,25 +9,67 @@
   <link rel="stylesheet" href="./resources/css/main.css">
 </head>
 <body>
-<div id="auth-ui" style="margin-bottom:12px">
+  <!--<div id="auth-ui" style="margin-bottom:12px">
   <span id="user-echo">Read-only mode</span>
   <button id="sign-in-btn" onclick="window.location.href='login.html'">Admin Login</button>
   <button id="sign-out-btn" style="display:none">Sign out</button>
 </div>
+-->
+<div id="page-wrapper" class="container">
+
+  <header id="site-header">
+    <div id="header-content">
+       <a href="./"><img src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
+       <h3>Ang Bagong Gig ng mga Lasinggero.</h3>    
+        <ul>
+          <li><a href="./explore.html">🍺 Explore Mo lang!</a></li>
+          <li><a href="./community.html">🍺 Community</a></li>
+          <li><a href="./advertise.html">🍺 Advertise</a></li>
+          <li><a href="./badges.html">🍺 Rank Badges</a></li>
+        </ul>
+        <div id="login-btn">
+          <a href="./login.html">Mag Login ka!</a>
+        </div>
+      </div>
+  </header>
+
+<main id="site-content">
+<div id="header-hero-block">
+  <img src="./resources/img/hero_img.jpg" alt="Kwentong Lasing">  
+  <div id="chat-bubble-box">
+      <textarea id="chat-input" placeholder="Anong kwentong lasing mo?"></textarea>
+      <div class="chat-tools">
+        <div class="txtlimit">20/350</div>
+      <button id="send-btn">🍺 Share na yan!</button>
+      </div>
+  </div>
+</div>
+</main>
+
+<div id="cabinet-block">
+<div id="cabinet">
+dfhdf
+</div>
+</div>
+
+</div>
+
+
+
 <script>
 function getAppAuth(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } }
 function refreshAuthUI(){ const a=getAppAuth(); const echo=document.getElementById('user-echo'); const inBtn=document.getElementById('sign-in-btn'); const outBtn=document.getElementById('sign-out-btn'); if(a){ echo.textContent = 'Logged in as ' + (a.username||''); inBtn.style.display='none'; outBtn.style.display=''; } else { echo.textContent='Read-only mode'; inBtn.style.display=''; outBtn.style.display='none'; } }
 document.getElementById('sign-out-btn').addEventListener('click', ()=>{ try{ sessionStorage.removeItem('app_auth'); sessionStorage.removeItem('cedb_auth'); }catch(_e){} refreshAuthUI(); window.location.href='login.html' })
 refreshAuthUI()
 </script>
-<div id="json-output" style="display:none"></div>
 
+<!---
+<div id="json-output" style="display:none"></div>
 <div style="margin:8px 0">
   <button id="refresh-btn" style="display: none;">Refresh</button>
   <button id="save-btn" style="display: none;">Save</button>
   <span id="status" style="margin-left:12px"></span>
 </div>
- 
-<div id="id1-name" style="margin-top:8px"></div>
+-->
 </body>
 </html>
