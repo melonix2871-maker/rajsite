@@ -29,11 +29,11 @@ function getCoreUrls(){ return { dbUrl: WRITE_DB_URL } }
 function requireSession(){
   const app = (function(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } })()
   if(!app || String(app.role||'')!=='superadmin'){
-    window.location.href='login.html'
+    window.location.href='/login.html'
     return null
   }
   const auth=sessionStorage.getItem('cedb_auth')||''
-  if(!auth){ window.location.href='login.html'; return null }
+  if(!auth){ window.location.href='/login.html'; return null }
   return auth
 }
 function setAuthedUI(){ document.getElementById('auth-status').textContent='✅ Session active'; document.getElementById('logout').style.display=''; document.getElementById('logout').addEventListener('click',()=>{ try{ sessionStorage.removeItem('cedb_auth'); sessionStorage.removeItem('app_auth') }catch(_e){} window.location.href='login.html' }) }
