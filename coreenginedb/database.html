@@ -277,14 +277,14 @@
   <script>
     let config={}
     async function loadConfig(){
-      try{ const r = await fetch('/json/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
+      try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
       if(!config.adapter) config.adapter = 'localStorage'
-      if(!config.http) config.http = { url: '/json/db.json', method: 'PUT' }
+      if(!config.http) config.http = { url: 'https://assets.antserver1.eu.org/db.json', method: 'PUT' }
     }
 
     class HttpAdapter{
-      constructor(opts){ this.url = opts.url||'/json/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
+      constructor(opts){ this.url = opts.url||'https://assets.antserver1.eu.org/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
       async read(){ 
         const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); const a = (config&&config.auth)||{}; if(a.enabled && !base.Authorization){ base.Authorization = 'Basic '+ btoa('admin:securepassword') } return base }).call(this)
         const r = await fetch(this.url,{
@@ -609,7 +609,7 @@
       try{ const pr = localStorage.getItem('cedb_queue'); if(pr){ const t = JSON.parse(pr); if(Array.isArray(t)){ db.data = t; currentData = db.list() } } }catch(_){ }
       if(queue && queue.pending) { try{ await queue.flush() }catch(_){ } }
       if(!currentData.length){
-        const snapUrl = (settings&&settings.snapshotUrl) || (config.http&&config.http.url) || '/json/db.json'
+        const snapUrl = (settings&&settings.snapshotUrl) || (config.http&&config.http.url) || 'https://assets.antserver1.eu.org/db.json'
         try{ const r = await fetch(snapUrl,{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); await queue.flush(); currentData = await db.load(); connStatus='up' } else { connStatus='down' } } else { connStatus='down' } }catch(_){ connStatus='down' }
       }
       fPrefix.value = config.defaultPrefix
@@ -827,7 +827,7 @@
     document.getElementById('footer-conflict-open').addEventListener('click', openConflict)
     document.getElementById('footer-flush').addEventListener('click', async ()=>{ if(queue) await queue.flush(); renderStatus() })
     document.getElementById('footer-selftest-run').addEventListener('click', async ()=>{ selfTestActive=true; selfTestResult=null; processes.selftest=true; renderStatus(); await runSelfTest(); processes.selftest=false; renderStatus() })
-    document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('/json/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
+    document.getElementById('footer-seed').addEventListener('click', async ()=>{ try{ const r = await fetch('https://assets.antserver1.eu.org/db.json',{cache:'no-store'}); if(r.ok){ const j = await r.json(); if(Array.isArray(j)){ db.data = j; await db.persist(); if(queue) await queue.flush(); currentData = await db.load(); renderCollections(currentData); renderRows() } } }catch(_){ } })
     document.getElementById('footer-restore').addEventListener('click', async ()=>{ const t = localStorage.getItem('cedb_backup'); if(!t) return; try{ const j = JSON.parse(t); if(Array.isArray(j)){ db.data=j; await db.adapter.write(db.data); currentData = db.list(); renderCollections(currentData); renderRows() } }catch(_){ } })
     document.getElementById('footer-logout').addEventListener('click', ()=>{ localStorage.removeItem('cedb_session'); localStorage.removeItem('cedb_authenticated'); location.reload() })
     function openSettings(){ const m = document.getElementById('settings-drawer'); m.classList.remove('hidden'); m.classList.add('open'); const sraw = localStorage.getItem('cedb_settings'); let s=null; try{ s=sraw?JSON.parse(sraw):null }catch(_){ s=null } document.getElementById('set-snapshot').value = (s&&s.snapshotUrl)||''; document.getElementById('set-write-url').value = (s&&s.writeUrl)||''; document.getElementById('set-write-method').value = (s&&s.writeMethod)||'PUT'; document.getElementById('set-headers').value = s&&s.headers? JSON.stringify(s.headers): '' }
@@ -967,10 +967,10 @@
     drawerTabs.addEventListener('click', (e)=>{ const b=e.target.closest('button'); if(!b) return; const id=b.getAttribute('data-tab'); ['settings','activity','apikeys'].forEach(did=>{ const el=document.getElementById(did+'-drawer'); if(el){ if(did===id){ el.classList.add('open'); el.classList.remove('hidden') } else { el.classList.remove('open'); el.classList.add('hidden') } } }); setActivityTimer(id==='activity') })
     function openApiKeys(){ const d=document.getElementById('apikeys-drawer'); d.classList.remove('hidden'); d.classList.add('open'); addTab('apikeys','API Keys'); loadApiKeys(); }
     function closeApiKeys(){ const d=document.getElementById('apikeys-drawer'); d.classList.remove('open'); d.classList.add('hidden'); removeTab('apikeys') }
-    async function loadApiKeys(){ try{ const r = await fetch('/json/config.json',{cache:'no-store'}); const j = r.ok? await r.json() : {}; const keys = (j&&j.apiKeys)||[]; const list=document.getElementById('apikeys-list'); list.innerHTML = keys.length? keys.map(k=>`<div style="padding:8px;border-bottom:1px solid #eee"><code>${k}</code></div>`).join('') : '<div class="muted">No API keys</div>'; }catch(_){ }
+    async function loadApiKeys(){ try{ const r = await fetch('https://assets.antserver1.eu.org/config.json',{cache:'no-store'}); const j = r.ok? await r.json() : {}; const keys = (j&&j.apiKeys)||[]; const list=document.getElementById('apikeys-list'); list.innerHTML = keys.length? keys.map(k=>`<div style="padding:8px;border-bottom:1px solid #eee"><code>${k}</code></div>`).join('') : '<div class="muted">No API keys</div>'; }catch(_){ }
     }
     function randomToken(n=32){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
-    async function createApiKey(){ try{ const head = await fetch('/json/config.json',{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch('/json/config.json'); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch('/json/config.json',{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }
+    async function createApiKey(){ try{ const head = await fetch('https://assets.antserver1.eu.org/config.json',{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch('https://assets.antserver1.eu.org/config.json'); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch('https://assets.antserver1.eu.org/config.json',{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }
     document.getElementById('apikeys').addEventListener('click', ()=>{ openApiKeys(); addTab('activity','Activity'); addTab('settings','Settings') })
     document.getElementById('apikeys-close').addEventListener('click', closeApiKeys)
     document.getElementById('apikey-create').addEventListener('click', createApiKey)
