@@ -111,7 +111,7 @@ document.getElementById('register-form').addEventListener('submit', async (e)=>{
     const hash = await pbkdf2Hex(p, salt, iterations, 32)
     rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'username', metavalue:u, createddate: now, updateddate: now })
     rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'password', metavalue: JSON.stringify({ hash, salt, iterations }), createddate: now, updateddate: now })
-    const r = await fetch(WRITE_DB_URL, { method:'PUT', headers: Object.assign({ 'Content-Type':'application/json', 'X-CSRF-Token': csrf }, et? { 'If-Match': et } : {}), body: JSON.stringify(rows, null, 2) })
+    const r = await fetch(WRITE_DB_URL, { method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}), body: JSON.stringify(rows, null, 2) })
     if(!r.ok){ document.getElementById('register-status').textContent='❌ Registration failed'; return }
     document.getElementById('register-status').textContent='✅ Registered. Sign in now.'
   }catch(_e){ document.getElementById('register-status').textContent='❌ Registration error' }
