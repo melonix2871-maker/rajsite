@@ -61,7 +61,7 @@ export default {
           return { ok: false, reason: 'bad_credentials' }
         }
       }
-      if (username === 'admin' && password === 'securepassword') return { ok: true, user: username }
+      // No fallback credentials; must match configured users
       return { ok: false, reason: 'bad_credentials' }
     }
     function getCookie(name){

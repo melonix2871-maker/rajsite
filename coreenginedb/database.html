@@ -277,19 +277,31 @@
   </div>
   <script>
     let config={}
-    ;(function(){ try{ const app=JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(!app || String(app.role||'')!=='superadmin'){ window.CEDB_BLOCKED = true } }catch(_){ window.CEDB_BLOCKED = true } })();
-    if(window.CEDB_BLOCKED){ var m=document.getElementById('app-msg'); if(m){ m.textContent='Invalid user'; m.style.display='' } setTimeout(function(){ window.location.href='/login.html' }, 1500) }
+    ;(function(){
+      try{
+        const app = JSON.parse(sessionStorage.getItem('app_auth')||'null')
+        const cedb = sessionStorage.getItem('cedb_auth')||''
+        if(app && String(app.role||'')==='superadmin' && String(app.username||'')==='kwlasing_superadmin' && cedb){
+          const ttl = 3600*1000
+          const csrf = randomToken(32)
+          localStorage.setItem('cedb_session', JSON.stringify({ username: app.username, csrf, expiresAt: Date.now()+ttl }))
+          try{ document.cookie='csrf_token='+csrf+'; SameSite=Strict; Secure; path=/'; }catch(_){}
+          localStorage.setItem('cedb_authenticated','1')
+        }
+      }catch(_){ }
+    })();
     async function loadConfig(){
       try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
       if(!config.adapter) config.adapter = 'localStorage'
       if(!config.http) config.http = { url: 'https://assets.antserver1.eu.org/db.json', method: 'PUT' }
+      try{ const a = sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http) config.http={}; if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization = a } }catch(_){ }
     }
 
     class HttpAdapter{
       constructor(opts){ this.url = opts.url||'https://assets.antserver1.eu.org/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
       async read(){ 
-        const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); const a = (config&&config.auth)||{}; if(a.enabled && !base.Authorization){ base.Authorization = 'Basic '+ btoa('admin:securepassword') } return base }).call(this)
+        const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); return base }).call(this)
         const r = await fetch(this.url,{
           cache:'no-store',
           mode: 'cors',
@@ -310,7 +322,6 @@
           'Content-Type':'application/json',
           'X-CSRF-Token': tok
         }, this.headers, et? {'If-Match': et} : {}, (opts&&opts.allowEmpty)? {'X-Allow-Empty-Write':'true'} : {}); 
-        if((config&&config.auth&&config.auth.enabled) && !hdrs.Authorization){ hdrs.Authorization = 'Basic '+ btoa('admin:securepassword') }
         const r = await fetch(this.url,{
           method: this.method,
           headers: hdrs,
@@ -644,22 +655,21 @@
           const p = document.getElementById('login-password').value
           if(!u || !p){ setMsg('Please enter username and password','error'); return }
           const submitBtn = document.getElementById('login-submit'); if(submitBtn) submitBtn.disabled = true
-          const user = (auth.users||[]).find(x=>x.username===u) || { username:'admin', iterations:100000, salt:(auth.salt||'coreenginedb'), hash: localStorage.getItem('cedb_auth_hash_admin')||'' }
-          let hash
-          try{ hash = hasSubtle()? await pbkdf2(p, user.salt, user.iterations||100000) : await simpleHash(p, user.salt) }catch(_){ hash = await simpleHash(p, user.salt) }
-          if(user.hash && user.hash.length){ if(hash!==user.hash){ setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return } }
-          else {
-            if(u==='admin' && p==='securepassword'){
-              localStorage.setItem('cedb_auth_hash_admin', hash)
-              if(!auth.users) auth.users = []
-              const idx = auth.users.findIndex(x=>x.username==='admin')
-              if(idx>=0) auth.users[idx].hash = hash; else auth.users.push({ username:'admin', iterations:100000, salt:(auth.salt||'coreenginedb'), hash })
-            } else { setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return }
-          }
+          // Only allow superadmin from assets db.json
+          try{
+            const resp = await fetch('https://assets.antserver1.eu.org/db.json',{ cache:'no-store' })
+            const rows = resp.ok? await resp.json() : []
+            const su = Array.isArray(rows) ? rows.find(r=> String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(u)) : null
+            if(!su || String(su.metavalue||'')!==String(p)){
+              setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return
+            }
+          }catch(_){ setMsg('Login error','error'); if(submitBtn) submitBtn.disabled=false; return }
           sessionUser = u
           csrfToken = randomToken(32)
           const ttl = (auth.sessionTTL||3600)*1000
           localStorage.setItem('cedb_session', JSON.stringify({ username:u, csrf:csrfToken, expiresAt: Date.now()+ttl }))
+          try{ sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username: u })) }catch(_){}
+          try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(u)+':'+String(p))) }catch(_){}
           try{ document.cookie='csrf_token='+csrfToken+'; SameSite=Strict; Secure; path=/'; }catch(_){}
           localStorage.setItem('cedb_authenticated','1')
           setMsg('Login successful','success')
