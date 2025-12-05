@@ -32,6 +32,8 @@
 const WRITE_CONFIG_URL = 'https://assets.antserver1.eu.org/config.json'
 const WRITE_DB_URL = 'https://assets.antserver1.eu.org/db.json'
 function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_URL } }
+// Redirect away if already logged in
+if(sessionStorage.getItem('cedb_auth')){ window.location.href='admin.html' }
 </script>
 <script>
 async function tryLogin(username, password){
