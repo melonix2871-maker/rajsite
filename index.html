@@ -21,28 +21,12 @@ document.getElementById('sign-out-btn').addEventListener('click', ()=>{ try{ ses
 refreshAuthUI()
 </script>
 <div id="json-output" style="display:none"></div>
-<h1>Data</h1>
+<h1>Data Connection</h1>
 <div style="margin:8px 0">
-  <label>Name <input id="filter-name" type="text" placeholder="filter name"></label>
-  <label style="margin-left:12px">Country <input id="filter-country" type="text" placeholder="filter country"></label>
-  <button id="apply-filter">Apply</button>
+  <button id="refresh-btn">Refresh</button>
+  <button id="save-btn">Save</button>
   <span id="status" style="margin-left:12px"></span>
-  </div>
-<table id="data-table" class="table-list table table-responsive table-striped" style="width:100%">
-  <thead>
-    <tr>
-      <th class="coll-id">id</th>
-      <th class="coll-0">profile</th>
-      <th class="coll-1 name">name</th>
-      <th class="coll-2">height</th>
-      <th class="coll-3">weight</th>
-      <th class="coll-date">date</th>
-      <th class="coll-4"><span class="info">info</span></th>
-      <th class="coll-5">country</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-  </table>
+</div>
 <script>
 async function fetchRemoteJson(){
   try{
@@ -60,66 +44,13 @@ async function fetchRemoteJson(){
 // Firebase UI: show signed-in user details and sign-in/out
 // Simple banner; admin login is on login.html
 
-async function getJson(){
-  const data = await fetchRemoteJson()
-  return Array.isArray(data) ? data : []
-}
-async function renderFromJson(){
-  const data = await getJson();
-  if(!data) return false;
-  const nameQ = document.getElementById('filter-name').value.trim().toLowerCase();
-  const countryQ = document.getElementById('filter-country').value.trim().toLowerCase();
-  const filtered = data.filter(r =>
-    (!nameQ || String(r.name||'').toLowerCase().includes(nameQ)) &&
-    (!countryQ || String(r.country||'').toLowerCase().includes(countryQ))
-  );
-  const tbody = document.querySelector('#data-table tbody');
-  tbody.innerHTML = '';
-  for(let i=0;i<filtered.length;i++){
-    const r = filtered[i];
-    const id = r.id || (i+1);
-    const tr = document.createElement('tr');
-    const created = r.createddate || r.datecreated || ''
-    const updated = r.updateddate || r.dateupdated || ''
-    tr.innerHTML = `<td>${id}</td><td></td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${created||updated}</td><td>${r.metavalue||''}</td><td>${r.country||''}</td>`;
-    tbody.appendChild(tr);
-  }
-  document.getElementById('status').textContent = `${filtered.length} rows`;
-  return true;
-}
-document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); });
-function updateId1Name(){
-  const data = getJson();
-  if(!data || !data.length) return false;
-  const rec = data.find(r => (r.seq||0) === 1) || data[0];
-  const el = document.getElementById('id1-name');
-  if(el) el.textContent = rec && rec.name ? rec.name : '';
-  return true;
-}
-function updateDataTargets(){
-  const data = getJson();
-  if(!data || !data.length) return false;
-  const nodes = document.querySelectorAll('[data-id]');
-  nodes.forEach(el => {
-    const idAttr = el.getAttribute('data-id');
-    const idNum = Number(idAttr);
-    const rec = data.find(r => (Number(r.seq)||0) === idNum) || data[(idNum>0?idNum-1:0)] || data[0];
-    const ds = el.dataset;
-    let field = 'name';
-    if ('weight' in ds) field = 'weight';
-    else if ('name' in ds) field = 'name';
-    else if ('height' in ds) field = 'height';
-    else if ('date' in ds) field = 'date';
-    else if ('info' in ds) field = 'info';
-    else if ('country' in ds) field = 'country';
-    el.textContent = rec && rec[field] ? rec[field] : '';
-  });
-  return true;
-}
-document.getElementById('apply-filter').addEventListener('click', () => { renderFromJson(); updateId1Name(); updateDataTargets(); });
-const iv = setInterval(async ()=>{ const a = await renderFromJson(); const b = updateId1Name(); const c = updateDataTargets(); if(a && b && c){ clearInterval(iv); } }, 500);
+let CURRENT_ROWS = []
+async function refresh(){ const rows = await fetchRemoteJson(); CURRENT_ROWS = Array.isArray(rows)? rows : []; document.getElementById('status').textContent = `${CURRENT_ROWS.length} rows`; }
+async function save(){ try{ const url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; const head = await fetch(url,{ method:'HEAD' }); const et = head.headers.get('etag')||''; const r = await fetch(url,{ method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}), body: JSON.stringify(CURRENT_ROWS, null, 2) }); document.getElementById('status').textContent = r.ok? 'Saved' : 'Save failed'; }catch(_){ document.getElementById('status').textContent = 'Save error' } }
+document.getElementById('refresh-btn').addEventListener('click', refresh)
+document.getElementById('save-btn').addEventListener('click', save)
+refresh()
 </script>
-<div data-id="1" data-name style="margin-top:8px">display name here</div>
-<div data-id="1" data-weight style="margin-top:8px">display weight here</div>
+<div id="id1-name" style="margin-top:8px"></div>
 </body>
 </html>
