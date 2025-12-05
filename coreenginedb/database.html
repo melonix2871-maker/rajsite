@@ -295,13 +295,13 @@
         }); 
         if(!r.ok) return []; 
         const et = r.headers.get('etag'); 
-        if(et) localStorage.setItem('cedb_etag', et); 
+        if(et) window.cedbEtag = et; 
         const t = await r.text(); 
         try{ return JSON.parse(t) }catch(_){ return [] } 
       }
       async write(data, opts){ 
         const body = JSON.stringify(data,null,2); 
-        const et = localStorage.getItem('cedb_etag')||''; 
+        const et = window.cedbEtag||''; 
         const hdrs = Object.assign({
           'Content-Type':'application/json'
         }, this.headers, et? {'If-Match': et} : {}, (opts&&opts.allowEmpty)? {'X-Allow-Empty-Write':'true'} : {}); 

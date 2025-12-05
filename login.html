@@ -56,25 +56,25 @@ document.getElementById('login-form').addEventListener('submit', (e)=>{
 function hex(buf){ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('') }
 function randHex(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
 async function pbkdf2Hex(password, salt, iterations, length){ const enc = new TextEncoder(); const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']); const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: enc.encode(salt), iterations }, key, (length||32)*8); return hex(bits) }
-async function readRemote(){ try{ const { dbUrl } = getCoreUrls(); const r = await fetch(dbUrl, { cache:'no-store', mode:'cors', credentials:'omit' }); if(!r.ok) return []; const et=r.headers.get('etag'); if(et) localStorage.setItem('cedb_etag', et); const t = await r.text(); try{ return JSON.parse(t) }catch(_){ return [] } }catch(_e){ return [] } }
-async function writeRemote(records){ try{ const { dbUrl } = getCoreUrls(); const et=localStorage.getItem('cedb_etag')||''; const headers=Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}); const body=JSON.stringify(records,null,2); const r = await fetch(dbUrl, { method:'PUT', headers, body, mode:'cors', credentials:'omit' }); if(r.status===412){ document.getElementById('register-status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok){ document.getElementById('register-status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) localStorage.setItem('cedb_etag', newEt); return true }catch(_e){ document.getElementById('register-status').textContent='❌ Write error'; return false } }
+async function readConfig(){ try{ const { configUrl } = getCoreUrls(); const r = await fetch(configUrl, { cache:'no-store', mode:'cors', credentials:'omit' }); if(!r.ok) return {}; const et=r.headers.get('etag'); if(et) window.cedbEtag = et; const t = await r.text(); try{ return JSON.parse(t) }catch(_){ return {} } }catch(_e){ return {} } }
+async function writeConfig(cfg){ try{ const { configUrl } = getCoreUrls(); const et=window.cedbEtag||''; const headers=Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}); const body=JSON.stringify(cfg,null,2); const r = await fetch(configUrl, { method:'PUT', headers, body, mode:'cors', credentials:'omit' }); if(r.status===412){ document.getElementById('register-status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok){ document.getElementById('register-status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) window.cedbEtag = newEt; return true }catch(_e){ document.getElementById('register-status').textContent='❌ Write error'; return false } }
 document.getElementById('register-form').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const u = document.getElementById('reg-username').value.trim();
   const p = document.getElementById('reg-password').value.trim();
   const c = document.getElementById('reg-confirm').value.trim();
   if(!u || !p || p!==c){ document.getElementById('register-status').textContent='Enter matching username/password'; return }
-  let list = await readRemote();
-  if(!Array.isArray(list)) list = [];
-  const exists = list.find(x => String(x.collection||'')==='users' && String(x.prefix||'')==='app_' && String(x.metakey||'')===u);
+  let cfg = await readConfig();
+  if(!cfg || typeof cfg !== 'object') cfg = {};
+  if(!cfg.auth) cfg.auth = { enabled: true, salt: 'coreenginedb', users: [] };
+  if(!Array.isArray(cfg.auth.users)) cfg.auth.users = [];
+  const exists = cfg.auth.users.find(x => String(x.username||'')===u);
   if(exists){ document.getElementById('register-status').textContent='❌ Username already exists'; return }
   const salt = randHex(12);
   const iterations = 100000;
   const hash = await pbkdf2Hex(p, salt, iterations, 32);
-  const now = new Date().toISOString();
-  const rec = { id: crypto.randomUUID(), relid: 0, prefix: 'app_', collection: 'users', metakey: u, metavalue: JSON.stringify({ hash, salt, iterations }), datecreated: now, dateupdated: now };
-  list.push(rec);
-  const ok = await writeRemote(list);
+  cfg.auth.users.push({ username: u, iterations, salt, hash });
+  const ok = await writeConfig(cfg);
   document.getElementById('register-status').textContent = ok ? '✅ Registered. Sign in now.' : '❌ Registration failed';
 })
 </script>
