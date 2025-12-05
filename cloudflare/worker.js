@@ -11,7 +11,7 @@ export default {
       h.set('Access-Control-Allow-Origin', '*')
     }
     h.set('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,OPTIONS')
-    h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, If-Match, X-Allow-Empty-Write, X-API-Key, X-CSRF-Token, x-csrf-token')
+    h.set('Access-Control-Allow-Headers', 'Content-Type, content-type, Authorization, authorization, If-Match, if-match, X-Allow-Empty-Write, x-allow-empty-write, X-API-Key, x-api-key, X-CSRF-Token, x-csrf-token')
     h.set('Access-Control-Expose-Headers', 'ETag')
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h })
 
