@@ -74,7 +74,9 @@ async function renderFromJson(){
     const r = filtered[i];
     const id = r.id || (i+1);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${id}</td><td></td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${r.datecreated||''}</td><td>${r.metavalue||''}</td><td>${r.country||''}</td>`;
+    const created = r.createddate || r.datecreated || ''
+    const updated = r.updateddate || r.dateupdated || ''
+    tr.innerHTML = `<td>${id}</td><td></td><td>${r.name||''}</td><td>${r.height||''}</td><td>${r.weight||''}</td><td>${created||updated}</td><td>${r.metavalue||''}</td><td>${r.country||''}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('status').textContent = `${filtered.length} rows`;
