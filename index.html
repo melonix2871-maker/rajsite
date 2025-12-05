@@ -21,10 +21,10 @@ document.getElementById('sign-out-btn').addEventListener('click', ()=>{ try{ ses
 refreshAuthUI()
 </script>
 <div id="json-output" style="display:none"></div>
-<h1>Data Connection</h1>
+
 <div style="margin:8px 0">
-  <button id="refresh-btn">Refresh</button>
-  <button id="save-btn">Save</button>
+  <button id="refresh-btn" style="display: none;">Refresh</button>
+  <button id="save-btn" style="display: none;">Save</button>
   <span id="status" style="margin-left:12px"></span>
 </div>
 <script>
@@ -47,9 +47,9 @@ async function fetchRemoteJson(){
 let CURRENT_ROWS = []
 async function refresh(){ const rows = await fetchRemoteJson(); CURRENT_ROWS = Array.isArray(rows)? rows : []; document.getElementById('status').textContent = `${CURRENT_ROWS.length} rows`; }
 async function save(){ try{ const url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; const head = await fetch(url,{ method:'HEAD' }); const et = head.headers.get('etag')||''; const r = await fetch(url,{ method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}), body: JSON.stringify(CURRENT_ROWS, null, 2) }); document.getElementById('status').textContent = r.ok? 'Saved' : 'Save failed'; }catch(_){ document.getElementById('status').textContent = 'Save error' } }
-document.getElementById('refresh-btn').addEventListener('click', refresh)
-document.getElementById('save-btn').addEventListener('click', save)
-refresh()
+//document.getElementById('refresh-btn').addEventListener('click', refresh)
+//document.getElementById('save-btn').addEventListener('click', save)
+//refresh()
 </script>
 <div id="id1-name" style="margin-top:8px"></div>
 </body>
