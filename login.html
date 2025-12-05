@@ -33,8 +33,7 @@
 const WRITE_CONFIG_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/config.json'
 const WRITE_DB_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
 function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_URL } }
-// Redirect away if already logged in
-if(sessionStorage.getItem('cedb_auth')){ window.location.href='admin.html' }
+try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='admin.html' } else if(app){ window.location.href='index.html' } }catch(_){}
 </script>
 <script>
 async function tryLogin(username, password){
