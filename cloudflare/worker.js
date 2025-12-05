@@ -79,8 +79,9 @@ export default {
     }
     function checkCsrf(){
       const header = req.headers.get('X-CSRF-Token') || req.headers.get('x-csrf-token') || ''
-      // For cross-origin requests, cookie from site origin is not sent to workers.dev.
-      // Accept header presence as CSRF token signal.
+      const hasAuth = !!(req.headers.get('Authorization') || '')
+      // If authenticated via Authorization, skip CSRF requirement (cross-origin scenario)
+      if(hasAuth) return { ok:true }
       if(!header) return { ok:false, reason:'missing_csrf' }
       return { ok:true }
     }
