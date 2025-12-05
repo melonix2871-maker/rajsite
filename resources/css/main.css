@@ -1,5 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Comic+Relief:wght@400;700&display=swap');
 
+*{
+    margin: 0;
+    padding: 0;
+}
+
+body{
+    background: #222;
+    color: #fff;
+    position: relative;
+}
+
 body,button,input,select,textarea{  
   font-family: "Comic Neue", cursive;
   font-weight: 400;
@@ -10,4 +21,169 @@ h1,h2,h3,h4,h5,h6{
   font-family: "Comic Relief", system-ui;
   font-weight: 700;
   font-style: normal;
+}
+
+.container{
+    max-width: 1200px;
+    margin: 0 auto;    
+}
+
+header h3{
+  max-width: 250px;
+  font-weight: 800;
+  font-size: 25px;
+  margin-top: 10px;
+  margin-bottom: 10px; 
+}
+
+header ul{
+  list-style: none; 
+  line-height: 26px;
+}
+
+header ul a{
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #f16d00;
+}
+
+header #login-btn a{
+  background: #f58b01;
+  color: #fff;
+   text-decoration: none;
+  font-weight: 800;
+  max-width: 200px;
+  display: block;
+  text-align: center;
+  text-transform: uppercase;
+  color: #222;
+  font-weight: 800;
+  font-size: 20px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  margin-top: 20px;  
+  font-weight: bold;
+}
+
+header #login-btn a:hover{
+  background: #ffe497;
+}
+
+header ul a:hover{
+  color: #fff;
+}
+
+header{
+  padding-top: 20px;
+}
+
+#page-wrapper{
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  position: relative;
+}
+
+#page-wrapper header{
+  border-right: solid 1px #333;
+  padding-right: 20px;
+  height: 100vh;
+  box-shadow: 12px 5px 15px rgba(0,0,0,.5)
+}
+
+#header-content{
+  position: fixed;
+}
+
+header{
+  min-width: 250px;
+}
+
+#header-hero-block img{ 
+  max-width: 100%;
+}
+
+#cabinet-block{
+  max-width: 300px;
+  width: 100%;  
+}
+
+#cabinet{
+   background: #fff;
+  margin: 10px 0;
+  border-radius: 8px;
+  padding: 8px;
+  color: #222;
+  height: 95vh;
+}
+
+#header-hero-block h1{ 
+ text-align: center;
+  margin-top: -20px;
+}
+
+#header-hero-block h4{
+  text-align: center;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: .6;
+  font-weight: 200;
+}
+
+#chat-bubble-box #chat-input{
+  display: block;
+  width: 100%;
+  resize: none;
+  border: solid 2px #cdcdcd;
+  border-radius: 8px;
+  height: 120px;
+  padding: 8px; 
+  max-width: 586px;
+  font-weight: bold;
+  font-size: 25px;
+}
+
+#chat-bubble-box{
+  margin-top: -30px;
+  position: relative;
+  z-index:6;
+  padding: 10px;
+}
+
+#chat-bubble-box button{
+  background: #f58b01;
+  font-size: 18px;
+  border: solid 1px #f58b01;
+  font-weight: bold;
+  padding: 8px 20px;
+  border-radius: 8px;
+  margin-top: 10px;
+  width: 200px;  
+  cursor: pointer;
+  text-transform: uppercase;  
+}
+
+.chat-tools{
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+}
+
+.chat-tools .txtlimit{
+  margin-top: 10px;
+  opacity:.5;
+  padding-left: 10px;
+}
+
+#site-content{
+  position: relative;
+}
+
+#header-hero-block{
+ position: fixed;
+  left:33%;
+  width: 622px;  
 }
