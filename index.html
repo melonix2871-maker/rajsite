@@ -6,7 +6,8 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Kwentong Lasing. Serves Beer Daily!</title>
   <link rel="icon" type="image/png" href="./resources/img/icon.png" />
-  <link rel="stylesheet" href="./resources/css/main.css">  
+  <link rel="stylesheet" href="./resources/css/main.css">
+
 </head>
 <body>
   <!-- Auth UI is commented out in your original code -->
@@ -17,332 +18,265 @@
     <button id="sign-out-btn" style="display:none">Sign out</button>
   </div>
   -->
-  
+
 <div id="page-wrapper" class="container">
 
   <header id="site-header">
     <div id="header-content">
        <a href="./"><img width="190" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
-       <h3>Ang Bagong Gig ng mga Lasinggero.</h3>    
+       <h3>The New Gig For The Drunkards.</h3>
         <ul>
-          <li><a href="./explore.html">🍺 Explore Mo lang!</a></li>
-          <li><a href="./community.html">🍺 Profiles</a></li>
-          <li><a href="./advertise.html">🍺 Advertise</a></li>
-          <li><a href="./badges.html">🍺 Rank Badges</a></li>
+          <li><a class="ignore" href="./index.html">🍺 Home</a></li>        
+          <li><a class="ignore" href="./community.html">🍺 FAQ</a></li>   
+          <li><a href="./rules.html">🍺 Rules & Regulations</a></li>      
         </ul>
         <div id="login-btn">
-          <a href="./login.html">Mag Login ka!</a>
+          <a class="ignore" href="./login.html">Login</a>
         </div>
-        
-        <!-- ADDED TRANSLATION WIDGET HERE -->     
-  <div class="language-selector">         
-  <span>English</span>
-<div class="toggle-wrapper">
-  <input class="toggle-checkbox" type="checkbox" checked>
-  <div class="toggle-container">  
-    <div class="toggle-button">
-      <div class="toggle-button-circles-container">
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-        <div class="toggle-button-circle"></div>
-      </div>
-    </div>
-  </div>  
-</div>
-<span>Tagalog</span>
-</div>
+
+        <div id="kl_exchange">
+          <h4>🍺 +💵 Beer Exchange</h4>
+           <ul>
+             <li> 1 Bottle = <span id="conversion" class="ignore">$5</span></li>
+             <li> 1 Bucket = <span id="conversion" class="ignore">$15</span></li>
+             <li> 1 Case = <span id="conversion" class="ignore">$25</span></li>
+           </ul>
+        </div>
+
+        <!-- ADDED TRANSLATION WIDGET HERE -->
+        <small class="ignore" style="text-align: center; text-transform: uppercase;margin-bottom: -12px;font-weight: bold;">Select Language:</small>
+        <div class="switchlang ignore">
+	    <a href="javascript:translate.changeLanguage('english');">English</a>
+     	<a href="javascript:translate.changeLanguage('filipino');">Tagalog</a>
+	    <a href="javascript:translate.changeLanguage('chinese_traditional');">Chinese</a>
+      <a href="javascript:translate.changeLanguage('spanish');">Spanish</a>
+      <a href="javascript:translate.changeLanguage('japanese');">Japanese</a>
+      <a href="javascript:translate.changeLanguage('korean');">Korean</a>     
+
+        </div>
         <!-- END TRANSLATION WIDGET -->
-        
+
       </div>
   </header>
 
 <main id="site-content">
 <div id="header-hero-block">
-  <img src="./resources/img/hero_img.jpg" alt="Kwentong Lasing">  
+  <img src="./resources/img/hero_img.jpg" alt="Kwentong Lasing">
   <div id="chat-bubble-box">
-      <textarea id="chat-input" placeholder="Anong kwentong lasing mo?"></textarea>
+      <textarea id="chat-input" placeholder="Share your unique experience when you got drunk."></textarea>
       <div class="chat-tools">
         <div class="txtlimit">20/350</div>
-      <button id="send-btn">🍺 Share na yan!</button>
+      <button class="ignore" id="send-btn">🍺 Share it!</button>
       </div>
   </div>
   <div id="story-title-bar">
-    <h2>Brew Tales</h2>
+    <h2>Latest Stories</h2>
   </div>
 </div>
 
-<div id="stories-block"> 
+<div id="stories-block">
   <div id="stories-lists">
     <div id="stories-list">
        <!-- Your content here -->
-       Lorem ipsum dolor sit amet...
-    </div>    
+       <div id="story-heading">
+       <div id="user-details">
+       <img src="https://i.pravatar.cc/40"/>
+       <p class="username">Tampal Puke</p>
+       </div>
+       <p class="time">2 mins ago</p>
+       </div>
+       <p>I have a friend na sa sobrang lasing, humikab siya, tapos diba may mga tao na pag humihikab, tinatakpan ng kamay kung bibig.
+         Nagtataka kami di niya tinanggal yung kamay niya agad. Ayun napansin namin lumalabas na yung suka niya sa mga gap ng daliri niya.
+         As in may kanin kanin pa. tl;dr - Sa combo ng kabusugan, kaantukan at kalasingan, humikab si fren at sumuka sa kamay niya.</p>
+        <div id="stories-tools">
+            <p>Buy me a beer 👉</p>
+            <div class="botts">
+                <a href="#"><img width="18" src="./resources/img/1bott.svg"/><span>2</span></a>
+                <a href="#"><img width="18" src="./resources/img/2bott.svg"/><span>34</span></a>
+                <a href="#"><img width="18" src="./resources/img/3bott.svg"/><span>8</span></a>
+                <a href="#"><img width="18" src="./resources/img/bucket.svg"/><span>2.5K</span></a>
+                <a href="#"><img width="18" src="./resources/img/case.svg"/><span>1.3K</span></a>
+            </div>
+            <small>⚠️ No 'likes' here, that stuff isn't intoxicating. Buy us some beer.</small>
+        </div>
+    </div>
+    <div id="stories-list">
+       <!-- Your content here -->
+       <div id="story-heading">
+       <div id="user-details">
+       <img src="https://i.pravatar.cc/40"/>
+       <p class="username">Tampal Puke</p>
+       </div>
+       <p class="time">2 mins ago</p>
+       </div>
+       <p>I have a friend na sa sobrang lasing, humikab siya, tapos diba may mga tao na pag humihikab, tinatakpan ng kamay kung bibig.
+         Nagtataka kami di niya tinanggal yung kamay niya agad. Ayun napansin namin lumalabas na yung suka niya sa mga gap ng daliri niya.
+         As in may kanin kanin pa. tl;dr - Sa combo ng kabusugan, kaantukan at kalasingan, humikab si fren at sumuka sa kamay niya.</p>
+        <div id="stories-tools">
+            <p class="ignore">Buy me a beer 👉</p>
+            <div class="botts">
+                <a href="#"><img width="18" src="./resources/img/1bott.svg"/><span>2</span></a>
+                <a href="#"><img width="18" src="./resources/img/2bott.svg"/><span>34</span></a>
+                <a href="#"><img width="18" src="./resources/img/3bott.svg"/><span>8</span></a>
+                <a href="#"><img width="18" src="./resources/img/bucket.svg"/><span>2.5K</span></a>
+                <a href="#"><img width="18" src="./resources/img/case.svg"/><span>1.3K</span></a>
+            </div>
+            <small>⚠️ No 'likes' here, that stuff isn't intoxicating. Buy us some beer.</small>
+        </div>
+    </div>
+    <div id="stories-list">
+       <!-- Your content here -->
+       <div id="story-heading">
+       <div id="user-details">
+       <img src="https://i.pravatar.cc/40"/>
+       <p class="username">Tampal Puke</p>
+       </div>
+       <p class="time">2 mins ago</p>
+       </div>
+       <p>I have a friend na sa sobrang lasing, humikab siya, tapos diba may mga tao na pag humihikab, tinatakpan ng kamay kung bibig.
+         Nagtataka kami di niya tinanggal yung kamay niya agad. Ayun napansin namin lumalabas na yung suka niya sa mga gap ng daliri niya.
+         As in may kanin kanin pa. tl;dr - Sa combo ng kabusugan, kaantukan at kalasingan, humikab si fren at sumuka sa kamay niya.</p>
+        <div id="stories-tools">
+            <p class="ignore">Buy me a beer 👉</p>
+            <div class="botts ignore">
+                <a href="#"><img width="18" src="./resources/img/1bott.svg"/><span>2</span></a>
+                <a href="#"><img width="18" src="./resources/img/2bott.svg"/><span>34</span></a>
+                <a href="#"><img width="18" src="./resources/img/3bott.svg"/><span>8</span></a>
+                <a href="#"><img width="18" src="./resources/img/bucket.svg"/><span>2.5K</span></a>
+                <a href="#"><img width="18" src="./resources/img/case.svg"/><span>1.3K</span></a>
+            </div>
+            <small>⚠️ No 'likes' here, that stuff isn't intoxicating. Buy us some beer.</small>
+        </div>
+    </div>
+    <div id="stories-list">
+       <!-- Your content here -->
+       <div id="story-heading">
+       <div id="user-details">
+       <img src="https://i.pravatar.cc/40"/>
+       <p class="username">Tampal Puke</p>
+       </div>
+       <p class="time">2 mins ago</p>
+       </div>
+       <p>I have a friend na sa sobrang lasing, humikab siya, tapos diba may mga tao na pag humihikab, tinatakpan ng kamay kung bibig.
+         Nagtataka kami di niya tinanggal yung kamay niya agad. Ayun napansin namin lumalabas na yung suka niya sa mga gap ng daliri niya.
+         As in may kanin kanin pa. tl;dr - Sa combo ng kabusugan, kaantukan at kalasingan, humikab si fren at sumuka sa kamay niya.</p>
+        <div id="stories-tools">
+            <p class="ignore">Buy me a beer 👉</p>
+            <div class="botts">
+                <a href="#"><img width="18" src="./resources/img/1bott.svg"/><span>2</span></a>
+                <a href="#"><img width="18" src="./resources/img/2bott.svg"/><span>34</span></a>
+                <a href="#"><img width="18" src="./resources/img/3bott.svg"/><span>8</span></a>
+                <a href="#"><img width="18" src="./resources/img/bucket.svg"/><span>2.5K</span></a>
+                <a href="#"><img width="18" src="./resources/img/case.svg"/><span>1.3K</span></a>
+            </div>
+            <small>⚠️ No 'likes' here, that stuff isn't intoxicating. Buy us some beer.</small>
+        </div>
+    </div>
+    <div id="stories-list">
+       <!-- Your content here -->
+       <div id="story-heading">
+       <div id="user-details">
+       <img src="https://i.pravatar.cc/40"/>
+       <p class="username">Tampal Puke</p>
+       </div>
+       <p class="time">2 mins ago</p>
+       </div>
+       <p>I have a friend na sa sobrang lasing, humikab siya, tapos diba may mga tao na pag humihikab, tinatakpan ng kamay kung bibig.
+         Nagtataka kami di niya tinanggal yung kamay niya agad. Ayun napansin namin lumalabas na yung suka niya sa mga gap ng daliri niya.
+         As in may kanin kanin pa. tl;dr - Sa combo ng kabusugan, kaantukan at kalasingan, humikab si fren at sumuka sa kamay niya.</p>
+        <div id="stories-tools">
+            <p class="ignore">Buy me a beer 👉</p>
+            <div class="botts">
+                <a href="#"><img width="18" src="./resources/img/1bott.svg"/><span>2</span></a>
+                <a href="#"><img width="18" src="./resources/img/2bott.svg"/><span>34</span></a>
+                <a href="#"><img width="18" src="./resources/img/3bott.svg"/><span>8</span></a>
+                <a href="#"><img width="18" src="./resources/img/bucket.svg"/><span>2.5K</span></a>
+                <a href="#"><img width="18" src="./resources/img/case.svg"/><span>1.3K</span></a>
+            </div>
+            <small>⚠️ No 'likes' here, that stuff isn't intoxicating. Buy us some beer.</small>
+        </div>
+    </div>
+    <div id="stories-list">
+       <!-- Your content here -->
+       <div id="story-heading">
+       <div id="user-details">
+       <img src="https://i.pravatar.cc/40"/>
+       <p class="username">Tampal Puke</p>
+       </div>
+       <p class="time">2 mins ago</p>
+       </div>
+       <p>I have a friend na sa sobrang lasing, humikab siya, tapos diba may mga tao na pag humihikab, tinatakpan ng kamay kung bibig.
+         Nagtataka kami di niya tinanggal yung kamay niya agad. Ayun napansin namin lumalabas na yung suka niya sa mga gap ng daliri niya.
+         As in may kanin kanin pa. tl;dr - Sa combo ng kabusugan, kaantukan at kalasingan, humikab si fren at sumuka sa kamay niya.</p>
+        <div id="stories-tools">
+            <p class="ignore">Buy me a beer 👉</p>
+            <div class="botts">
+                <a href="#"><img width="18" src="./resources/img/1bott.svg"/><span>2</span></a>
+                <a href="#"><img width="18" src="./resources/img/2bott.svg"/><span>34</span></a>
+                <a href="#"><img width="18" src="./resources/img/3bott.svg"/><span>8</span></a>
+                <a href="#"><img width="18" src="./resources/img/bucket.svg"/><span>2.5K</span></a>
+                <a href="#"><img width="18" src="./resources/img/case.svg"/><span>1.3K</span></a>
+            </div>
+            <small>⚠️ No 'likes' here, that stuff isn't intoxicating. Buy us some beer.</small>
+        </div>
+    </div>
+  </div>
+
+  <div id="copyright">
+    <p>&copy; Copyright <script>document.write(new Date().getFullYear())</script> Kwentong Lasing Community. All Rights reserved.</p>
+    <p>A Romeo Asis Production</p>
   </div>
 </main>
 
 <div id="cabinet-block">
 <div id="cabinet">
-dfhdf
+   <div id="side-widget">
+      <h3>🍺 Join Our Community</h3>
+      <p>Spill your 'Kwentong Lasing' here—where legendary stories get the applause they deserve! Join now and let’s turn tipsy tales into timeless laughter.</p>      
+    </div>
+
+   <div id="side-widget">
+     <h3>🍺 Trending</h3>
+     <ul>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> Why do I always get drunk at family gatherings?</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> That time I got so drunk I tried to marry a lamp post</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> The Great Beer Spill of 2023: A Tragicomedy</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> How I ended up in a karaoke contest with a parrot</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> The time I mistook a fire hydrant for a urinal</a></li>
+     </ul>
+
+   </div>
+
+   <div id="side-widget" class="ads_block">
+     <h3>🍺 Advertisement</h3>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+   </div>
+   
 </div>
 </div>
 
 </div>
 
-<!-- Hidden Google Translate widget -->
-<div id="google_translate_element" style="display:none;"></div>
 
-<!-- Google Translate Script with fallback -->
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
+<script src="http://translate.zvo.cn/static/translate.min.js"></script>
 <script>
-// FIXED: Safe initialization to prevent null errors
-document.addEventListener('DOMContentLoaded', function() {
-    // Only initialize translation widget if elements exist
-    initTranslationWidget();
-    
-    // FIXED: Only run auth functions if elements exist
-    try {
-        // Check if auth elements exist before using them
-        const signOutBtn = document.getElementById('sign-out-btn');
-        if (signOutBtn) {
-            signOutBtn.addEventListener('click', function() {
-                try {
-                    sessionStorage.removeItem('app_auth');
-                    sessionStorage.removeItem('cedb_auth');
-                } catch(e) {
-                    console.error('Error clearing auth:', e);
-                }
-                refreshAuthUI();
-                window.location.href = 'login.html';
-            });
-        }
-        
-        // Initialize auth UI if elements exist
-        refreshAuthUI();
-    } catch(e) {
-        console.log('Auth UI not available or commented out');
-    }
-});
-
-// Translation Widget Functions
-function initTranslationWidget() {
-    // Only initialize if translation elements exist
-    const languageBtn = document.querySelector('.language-btn');
-    const languageDropdown = document.querySelector('.language-dropdown');
-    
-    if (!languageBtn || !languageDropdown) {
-        console.warn('Translation widget elements not found');
-        return;
-    }
-    
-    // Toggle custom dropdown
-    languageBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        languageDropdown.classList.toggle('show');
-    });
-    
-    // Add click handlers to language options
-    document.querySelectorAll('.language-dropdown a').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const lang = this.getAttribute('data-lang');
-            changeLanguage(lang);
-            languageDropdown.classList.remove('show');
-        });
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.language-selector')) {
-            languageDropdown.classList.remove('show');
-        }
-    });
-}
-
-// FIXED: Safe auth functions
-function getAppAuth() { 
-    try { 
-        return JSON.parse(sessionStorage.getItem('app_auth') || 'null'); 
-    } catch(_) { 
-        return null; 
-    } 
-}
-
-function refreshAuthUI() {
-    try {
-        const a = getAppAuth();
-        const echo = document.getElementById('user-echo');
-        const inBtn = document.getElementById('sign-in-btn');
-        const outBtn = document.getElementById('sign-out-btn');
-        
-        // Only update if elements exist
-        if (echo && inBtn && outBtn) {
-            if (a) {
-                echo.textContent = 'Logged in as ' + (a.username || '');
-                inBtn.style.display = 'none';
-                outBtn.style.display = '';
-            } else {
-                echo.textContent = 'Read-only mode';
-                inBtn.style.display = '';
-                outBtn.style.display = 'none';
-            }
-        }
-    } catch(e) {
-        console.log('Auth UI elements not found');
-    }
-}
-
-// Google Translate initialization
-function googleTranslateElementInit() {
-    try {
-        new google.translate.TranslateElement({
-            pageLanguage: 'en',
-            includedLanguages: 'tl,en,fr',
-            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-            autoDisplay: false
-        }, 'google_translate_element');
-        
-        // Hide the Google Translate dropdown
-        const style = document.createElement('style');
-        style.textContent = '.goog-te-combo { display: none !important; }';
-        document.head.appendChild(style);
-        
-        console.log('Google Translate initialized');
-    } catch(error) {
-        console.error('Failed to initialize Google Translate:', error);
-        showTranslationFallback();
-    }
-}
-
-// Improved changeLanguage function with retry logic
-function changeLanguage(lang) {
-    console.log('Changing language to:', lang);
-    
-    function attemptTranslate() {
-        const select = document.querySelector('.goog-te-combo');
-        if (select && select.value !== lang) {
-            select.value = lang;
-            select.dispatchEvent(new Event('change'));
-            console.log('Language changed successfully');
-            
-            // Update button text based on selected language
-            const langNames = {
-                'en': '🇺🇸 English',
-                'tl': '🇵🇭 Tagalog',
-                'fr': '🇫🇷 French'
-            };
-            const btnText = document.querySelector('.language-btn');
-            if (btnText && langNames[lang]) {
-                btnText.innerHTML = `🌐 ${langNames[lang].split(' ')[1]} <span class="arrow">▼</span>`;
-            }
-            
-            return true;
-        }
-        return false;
-    }
-    
-    // Try immediately
-    if (attemptTranslate()) return;
-    
-    // If not ready, try every 100ms for 5 seconds
-    let attempts = 0;
-    const maxAttempts = 50;
-    const interval = setInterval(() => {
-        attempts++;
-        if (attemptTranslate()) {
-            clearInterval(interval);
-        } else if (attempts >= maxAttempts) {
-            console.error('Failed to change language: Google Translate widget not found');
-            clearInterval(interval);
-            showTranslationFallback(lang);
-        }
-    }, 100);
-}
-
-// Fallback function if Google Translate fails
-function showTranslationFallback(lang = 'tl') {
-    const fallbackMsg = document.createElement('div');
-    fallbackMsg.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: #ff6b35;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 9999;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    `;
-    fallbackMsg.innerHTML = `
-        Translate failed. 
-        <a href="https://translate.google.com/translate?hl=${lang}&sl=auto&tl=${lang}&u=${encodeURIComponent(window.location.href)}" 
-           target="_blank" 
-           style="color: white; text-decoration: underline; margin-left: 5px;">
-           Click here to translate
-        </a>
-    `;
-    document.body.appendChild(fallbackMsg);
-    
-    // Remove after 10 seconds
-    setTimeout(() => {
-        if (fallbackMsg.parentNode) {
-            fallbackMsg.parentNode.removeChild(fallbackMsg);
-        }
-    }, 10000);
-}
-
-// Handle Google Translate errors
-window.onerror = function(msg, url, lineNo, columnNo, error) {
-    // Ignore Google Translate tracking errors (they're often blocked by ad blockers)
-    if (msg.includes('translate.googleapis.com') || 
-        msg.includes('ERR_BLOCKED_BY_CLIENT') ||
-        url.includes('translate.googleapis.com')) {
-        console.log('Google Translate tracking error (likely blocked by ad blocker)');
-        return true; // Prevent error from showing in console
-    }
-    return false; // Let other errors through
-};
-
-// Alternative: Use MutationObserver to handle dynamic Google Translate elements
-if (typeof MutationObserver !== 'undefined') {
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                // Check if Google Translate elements were added
-                const googleElements = document.querySelector('.goog-te-combo, .goog-te-banner-frame');
-                if (googleElements) {
-                    // Ensure our styles override Google's
-                    const style = document.createElement('style');
-                    style.textContent = `
-                        .goog-te-banner-frame,
-                        .goog-te-menu-value,
-                        .goog-te-gadget-icon,
-                        .goog-te-combo {
-                            display: none !important;
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
-            }
-        });
-    });
-    
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-}
+translate.element.tagAttribute['textarea']=['placeholder'];
+translate.ignore.class.push('botts');
+translate.language.setLocal('english');
+translate.service.use('client.edge');
+translate.listener.start();
+translate.execute();
 </script>
-
 </body>
 </html>
