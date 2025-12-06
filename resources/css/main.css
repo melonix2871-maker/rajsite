@@ -3,12 +3,14 @@
 *{
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 
 body{
     background: #222;
     color: #fff;
     position: relative;
+    min-height: 100vh;
 }
 
 body,button,input,select,textarea{  
@@ -25,56 +27,11 @@ h1,h2,h3,h4,h5,h6{
 
 .container{
     max-width: 1200px;
-    margin: 0 auto;    
+    margin: 0 auto;
+    padding: 0 15px;
 }
 
-header h3{
-  max-width: 250px;
-  font-weight: 800;
-  font-size: 25px;
-  margin-top: 10px;
-  margin-bottom: 10px; 
-}
-
-header ul{
-  list-style: none; 
-  line-height: 26px;
-}
-
-header ul a{
-  color: #fff;
-  text-decoration: none;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #f16d00;
-}
-
-header #login-btn a{
-  background: #f58b01;
-  color: #fff;
-   text-decoration: none;
-  font-weight: 800;
-  max-width: 200px;
-  display: block;
-  text-align: center;
-  text-transform: uppercase;
-  color: #222;
-  font-weight: 800;
-  font-size: 20px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  margin-top: 20px;  
-  font-weight: bold;
-}
-
-header #login-btn a:hover{
-  background: #ffe497;
-}
-
-header ul a:hover{
-  color: #fff;
-}
-
+/* Header Styles */
 header{
   padding-top: 20px;
 }
@@ -84,44 +41,117 @@ header{
   gap: 20px;
   justify-content: space-between;
   position: relative;
+  min-height: 100vh;
 }
 
 #page-wrapper header{
   border-right: solid 1px #333;
   padding-right: 20px;
+  box-shadow: 12px 5px 15px rgba(0,0,0,.5);
+  position: sticky;
+  top: 0;
   height: 100vh;
-  box-shadow: 12px 5px 15px rgba(0,0,0,.5)
-}
-
-#header-content{
-  position: fixed;
+  overflow-y: auto;
 }
 
 header{
   min-width: 250px;
+  width: 250px;
+  flex-shrink: 0;
+}
+
+#header-content{
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 20px;
+}
+
+header h3{
+  max-width: 250px;
+  font-weight: 800;
+  font-size: 25px;
+  margin-top: 10px;
+  margin-bottom: 10px; 
+  line-height: 1.2;
+}
+
+header ul{
+  list-style: none; 
+  line-height: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+header ul a{
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #f16d00;
+  display: block;
+  padding: 5px 0;
+  transition: all 0.3s ease;
+}
+
+header ul a:hover{
+  color: #fff;
+  transform: translateX(5px);
+}
+
+header #login-btn a{
+  background: #f58b01;
+  color: #222;
+  text-decoration: none;
+  font-weight: 800;
+  width: 100%;
+  display: block;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 20px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  margin-top: auto;
+  transition: all 0.3s ease;
+}
+
+header #login-btn a:hover{
+  background: #ffe497;
+  transform: translateY(-2px);
+}
+
+/* Main Content Area */
+#site-content{
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* STICKY HERO BLOCK */
+#header-hero-block{
+  width: 100%;
+  max-width: 622px;
+  margin: 0 auto 20px auto;
+  position: sticky;
+  top: 0px;
+  z-index: 10;
 }
 
 #header-hero-block img{ 
-  max-width: 100%;
-}
-
-#cabinet-block{
-  max-width: 300px;
-  width: 100%;  
-}
-
-#cabinet{
-   background: #fff;
-  margin: 10px 0;
-  border-radius: 8px;
-  padding: 8px;
-  color: #222;
-  height: 95vh;
+  width: 100%;
+  height: auto;
+  display: block;  
+  max-height: 400px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 #header-hero-block h1{ 
- text-align: center;
+  text-align: center;
   margin-top: -20px;
+  position: relative;
+  z-index: 1;
 }
 
 #header-hero-block h4{
@@ -131,6 +161,19 @@ header{
   letter-spacing: 2px;
   opacity: .6;
   font-weight: 200;
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Chat Bubble */
+#chat-bubble-box{
+  margin-top: -30px;
+  position: relative;
+  z-index: 11;
+  padding: 10px;
+  background: rgba(34, 34, 34, 0.95); 
+  backdrop-filter: blur(5px);
 }
 
 #chat-bubble-box #chat-input{
@@ -139,51 +182,289 @@ header{
   resize: none;
   border: solid 2px #cdcdcd;
   border-radius: 8px;
-  height: 120px;
-  padding: 8px; 
-  max-width: 586px;
+  height: 90px;
+  padding: 12px;
   font-weight: bold;
-  font-size: 25px;
+  font-size: 18px;
+  background: #fff;
+  color: #222;
 }
 
-#chat-bubble-box{
-  margin-top: -30px;
-  position: relative;
-  z-index:6;
-  padding: 10px;
+#chat-bubble-box #chat-input:focus{
+  outline: none;
+  border-color: #f58b01;
 }
 
 #chat-bubble-box button{
-  background: #f58b01;
-  font-size: 18px;
-  border: solid 1px #f58b01;
-  font-weight: bold;
-  padding: 8px 20px;
-  border-radius: 8px;
-  margin-top: 10px;
-  width: 200px;  
+      background: #f58b01;
+    font-size: 16px;
+    border: solid 1px #f58b01;
+    font-weight: bold;
+    padding: 6px 1px;
+    border-radius: 8px;
+    margin-top: 10px;
+    width: 176px;
   cursor: pointer;
-  text-transform: uppercase;  
+  text-transform: uppercase;
+  color: #222;
+  transition: all 0.3s ease;
+}
+
+#chat-bubble-box button:hover{
+  background: #ffe497;
+  transform: translateY(-2px);
 }
 
 .chat-tools{
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 0;
 }
 
 .chat-tools .txtlimit{
   margin-top: 10px;
-  opacity:.5;
+  opacity: .5;
   padding-left: 10px;
+  font-size: 14px;
 }
 
-#site-content{
-  position: relative;
+/* Cabinet Block */
+#cabinet-block{
+  width: 300px;
+  flex-shrink: 0;
 }
 
-#header-hero-block{
- position: fixed;
-  left:33%;
-  width: 622px;  
+#cabinet{
+  background: #fff;
+  margin: 10px 0;
+  border-radius: 8px;
+  padding: 20px;
+  color: #222;
+  height: 95vh;
+  position: sticky;
+  top: 20px;
+  overflow-y: auto;
+}
+
+/* Stories Block */
+#stories-block{
+    margin-top: 20px;
+    padding: 0 10px;
+    position: relative;
+    z-index: 1;
+}
+
+#stories-lists {   
+    padding: 0px;
+    margin-top: 10px;
+}
+
+#stories-list {
+    line-height: 1.6;    
+    padding: 0px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 10px;
+  }
+  
+  #page-wrapper {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  #page-wrapper header {
+    position: relative;
+    height: auto;
+    width: 100%;
+    border-right: none;
+    border-bottom: solid 1px #333;
+    padding-right: 0;
+    box-shadow: none;
+    margin-bottom: 20px;
+  }
+  
+  #header-content {
+    position: relative;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  header h3 {
+    max-width: 100%;
+    text-align: center;
+    flex-basis: 100%;
+  }
+  
+  header ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin: 15px 0;
+  }
+  
+  #login-btn {
+    margin-top: 0;
+  }
+  
+  #header-hero-block {
+    position: relative;
+    top: auto;
+    margin: 0 auto 20px auto;
+  }
+  
+  #cabinet-block {
+    width: 100%;
+    max-width: 100%;
+    order: 3;
+  }
+  
+  #cabinet {
+    height: 300px;
+    position: relative;
+    top: auto;
+  }
+  
+  #stories-block {
+    order: 2;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  header ul {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  header ul li {
+    width: 100%;
+  }
+  
+  header ul a {
+    text-align: center;
+    padding: 10px;
+    background: rgba(241, 109, 0, 0.1);
+    border-radius: 8px;
+  }
+  
+  #header-content {
+    flex-direction: column;
+  }
+  
+  #login-btn {
+    width: 100%;
+  }
+  
+  #header-hero-block h1 {
+    font-size: 24px;
+  }
+  
+  #header-hero-block h4 {
+    font-size: 13px;
+  }
+  
+  #chat-bubble-box {
+    margin-top: -20px;
+  }
+  
+  #chat-bubble-box #chat-input {
+    font-size: 20px;
+    height: 100px;
+  }
+  
+  #chat-bubble-box button {
+    width: 100%;
+    font-size: 16px;
+  }
+  
+  .chat-tools {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .chat-tools .txtlimit {
+    padding-left: 0;
+    text-align: center;
+  }
+  
+  #stories-lists,
+  #stories-list {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 5px;
+  }
+  
+  header {
+    padding-top: 10px;
+  }
+  
+  header h3 {
+    font-size: 20px;
+  }
+  
+  #header-hero-block h1 {
+    font-size: 20px;
+    margin-top: -10px;
+  }
+  
+  #header-hero-block h4 {
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  
+  #chat-bubble-box {
+    padding: 8px;
+  }
+  
+  #chat-bubble-box #chat-input {
+    font-size: 18px;
+    height: 80px;
+    padding: 8px;
+  }
+  
+  #chat-bubble-box button {
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  #cabinet {
+    height: 250px;
+    padding: 15px;
+  }
+  
+  #stories-block {
+    margin-top: 10px;
+    padding: 0;
+  }
+}
+
+/* Print Styles */
+@media print {
+  #page-wrapper header,
+  #cabinet-block,
+  #chat-bubble-box {
+    display: none;
+  }
+  
+  #page-wrapper {
+    display: block;
+  }
+  
+  #header-hero-block {
+    position: relative !important;
+    top: auto !important;
+  }
 }
