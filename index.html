@@ -5,31 +5,153 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Kwentong Lasing. Serves Beer Daily!</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230066ff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="./resources/img/icon.png" />
   <link rel="stylesheet" href="./resources/css/main.css">
+  <style>
+    /* Translation Widget Styles - Added to existing CSS */
+    .language-selector {
+      position: relative;
+      display: inline-block;
+      font-family: Arial, sans-serif;
+      margin-left: 15px;
+    }
+
+    .language-btn {
+      background: linear-gradient(135deg, #ff6b35, #ff8e53);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .language-btn:hover {
+      background: linear-gradient(135deg, #e55a2b, #ff7a42);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .language-btn .arrow {
+      font-size: 9px;
+      transition: transform 0.3s;
+    }
+
+    .language-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: white;
+      min-width: 140px;
+      border-radius: 8px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      border: 1px solid #e0e0e0;
+      z-index: 1000;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .language-dropdown.show {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .language-dropdown a {
+      display: block;
+      padding: 10px 14px;
+      color: #333;
+      text-decoration: none;
+      font-size: 13px;
+      border-bottom: 1px solid #f5f5f5;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .language-dropdown a:hover {
+      background: #fff5f0;
+      color: #ff6b35;
+      padding-left: 18px;
+    }
+
+    .language-dropdown a:last-child {
+      border-bottom: none;
+    }
+
+    /* Hide Google Translate elements */
+    .goog-te-banner-frame,
+    .goog-te-menu-value,
+    .goog-te-gadget-icon,
+    .goog-te-combo {
+      display: none !important;
+    }
+    
+    /* Add some responsive styling */
+    @media (max-width: 768px) {
+      .language-selector {
+        margin-left: 10px;
+      }
+      .language-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      .language-dropdown {
+        min-width: 120px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!--<div id="auth-ui" style="margin-bottom:12px">
-  <span id="user-echo">Read-only mode</span>
-  <button id="sign-in-btn" onclick="window.location.href='login.html'">Admin Login</button>
-  <button id="sign-out-btn" style="display:none">Sign out</button>
-</div>
--->
+  <!-- Auth UI is commented out in your original code -->
+  <!--
+  <div id="auth-ui" style="margin-bottom:12px">
+    <span id="user-echo">Read-only mode</span>
+    <button id="sign-in-btn" onclick="window.location.href='login.html'">Admin Login</button>
+    <button id="sign-out-btn" style="display:none">Sign out</button>
+  </div>
+  -->
+  
 <div id="page-wrapper" class="container">
 
   <header id="site-header">
     <div id="header-content">
-       <a href="./"><img width="180" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
+       <a href="./"><img width="190" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
        <h3>Ang Bagong Gig ng mga Lasinggero.</h3>    
         <ul>
           <li><a href="./explore.html">🍺 Explore Mo lang!</a></li>
-          <li><a href="./community.html">🍺 Community</a></li>
+          <li><a href="./community.html">🍺 Profiles</a></li>
           <li><a href="./advertise.html">🍺 Advertise</a></li>
           <li><a href="./badges.html">🍺 Rank Badges</a></li>
         </ul>
         <div id="login-btn">
           <a href="./login.html">Mag Login ka!</a>
         </div>
+        
+        <!-- ADDED TRANSLATION WIDGET HERE -->
+        <div class="language-selector">
+          <button class="language-btn">
+            🌐 Translate
+            <span class="arrow">▼</span>
+          </button>
+          <div class="language-dropdown">
+            <a href="javascript:void(0)" data-lang="en">🇺🇸 English</a>
+            <a href="javascript:void(0)" data-lang="tl">🇵🇭 Tagalog</a>
+            <a href="javascript:void(0)" data-lang="fr">🇫🇷 French</a>
+          </div>
+        </div>
+        <!-- END TRANSLATION WIDGET -->
+        
       </div>
   </header>
 
@@ -43,66 +165,16 @@
       <button id="send-btn">🍺 Share na yan!</button>
       </div>
   </div>
+  <div id="story-title-bar">
+    <h2>Brew Tales</h2>
+  </div>
 </div>
 
 <div id="stories-block"> 
   <div id="stories-lists">
     <div id="stories-list">
-       Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam condimentum porta elit at congue. Vivamus lobortis dolor ac cursus vestibulum. Pellentesque auctor eros non nunc lacinia, a elementum arcu luctus. Aliquam molestie non arcu ac eleifend. Cras in sapien malesuada, hendrerit elit suscipit, lobortis nibh. Nulla ut mauris odio. Sed sit amet sagittis nibh.
-
-Vivamus magna turpis, aliquam luctus tincidunt sit amet, aliquet eget dui. Quisque metus felis, rutrum sodales volutpat ac, efficitur eu arcu. Proin sit amet tortor ut tellus iaculis pulvinar. Nulla auctor ut enim ac luctus. Nunc sed rhoncus metus, vel dapibus augue. Interdum et malesuada fames ac ante ipsum primis in faucibus. Morbi dictum purus eros, et tempus lacus dapibus condimentum. Phasellus maximus sagittis libero, in volutpat magna suscipit in. Pellentesque dictum sapien sit amet orci elementum, sit amet cursus nisi lacinia. Pellentesque imperdiet purus quis arcu facilisis, ac consectetur risus lobortis.
-
-Quisque mollis enim vitae mollis eleifend. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin et ultricies justo. Fusce purus augue, lobortis vel felis ut, consequat commodo nisl. Nam porttitor egestas arcu ac luctus. Vivamus vehicula scelerisque dapibus. Vestibulum tempor massa quis libero fringilla, nec mollis augue imperdiet. Quisque eu nunc in est porta aliquam condimentum a nisl. Quisque orci dolor, suscipit in elit sit amet, volutpat tristique nulla. Phasellus eget fermentum nisi.
-
-Nunc ut nisl elit. Pellentesque sit amet sem vel turpis efficitur maximus. Pellentesque pellentesque a turpis vitae tincidunt. Integer at nisl ut enim tristique pulvinar. Nulla ut dictum est, ut posuere est. Nunc est nunc, vehicula suscipit turpis id, placerat tempus odio. Vivamus eu ex ac nunc elementum euismod at a ligula. Etiam dapibus ligula quam, quis sodales ipsum gravida at. Quisque id nulla eu augue dapibus sodales. Donec orci diam, pellentesque ac dolor vitae, hendrerit porta magna.
-
-Cras ultricies neque et justo luctus interdum. Suspendisse sit amet neque lorem. Phasellus gravida iaculis mauris ut posuere. Nam sed pharetra nisl. Nam vel tempus quam. Sed sit amet leo et leo eleifend luctus. Proin tincidunt sapien sit amet felis hendrerit lobortis. Aenean eu scelerisque nulla. Donec imperdiet pulvinar turpis. Donec malesuada ipsum id dapibus luctus. Vivamus porttitor aliquet tellus, ac faucibus arcu varius quis. Aliquam aliquet volutpat odio, a bibendum arcu viverra sit amet. Phasellus eget cursus nunc, quis scelerisque nulla. Pellentesque tortor metus, lacinia in mollis a, auctor id urna.
-
-Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas ac vehicula nibh, nec congue dui. Quisque tristique neque quis nulla pretium interdum. Ut hendrerit molestie tortor in vehicula. Donec justo justo, euismod sit amet justo id, tincidunt commodo ex. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In vestibulum volutpat ligula, ut fringilla enim ultricies vitae. In hac habitasse platea dictumst. Aliquam placerat posuere efficitur. Praesent fringilla laoreet lectus ac rutrum. Pellentesque iaculis tellus purus, vel eleifend est laoreet in. Morbi non velit in massa pretium finibus nec quis neque. Morbi in dui non velit tristique ultricies non eget ipsum. Quisque vitae sem congue, molestie tellus nec, ultrices arcu. Nulla quam urna, feugiat tristique fermentum sed, bibendum eu est.
-
-Nunc vel malesuada leo. Aliquam eleifend libero ac tortor venenatis sagittis vel sit amet purus. Nam pulvinar nisi augue, id varius enim accumsan sed. Aliquam erat volutpat. Aenean quis mi in turpis eleifend porttitor eget eu nisl. Nam vulputate auctor enim. Nam eleifend tempus enim in accumsan. Maecenas eleifend, libero et ornare placerat, urna magna interdum nunc, ac vulputate ante orci nec dui. Donec non tortor quis metus sagittis dictum sed sit amet metus.
-
-Vivamus rutrum tortor a urna eleifend pretium. Phasellus vel blandit erat. Nullam dictum orci at orci sollicitudin, quis fringilla purus egestas. Maecenas efficitur egestas neque, in vestibulum sapien malesuada a. Vestibulum finibus lobortis ligula, ut consequat odio interdum ac. Pellentesque nec porta orci. Praesent consequat dapibus scelerisque. Phasellus malesuada nibh ex, quis condimentum ipsum viverra et.
-
-Morbi sit amet elit vitae orci semper eleifend. Aliquam ac sagittis nibh, et mollis tortor. Vivamus lacinia enim rhoncus, cursus dui id, iaculis mauris. Nullam pellentesque ut justo id efficitur. Donec porttitor mauris non erat euismod, in ornare sem auctor. Ut eu tortor sagittis, faucibus est ac, egestas nibh. Donec vulputate orci nisi, non iaculis felis maximus vel.
-
-Sed sollicitudin felis nec diam semper, vel ornare lectus lacinia. Morbi tortor tellus, mollis in lobortis ut, consectetur ut nisi. Nullam varius venenatis ante, id luctus purus tristique eget. Sed hendrerit tincidunt lacinia. Mauris sodales dapibus iaculis. Curabitur lacinia condimentum risus, sed vulputate nunc tincidunt a. Integer eget ligula mauris. Etiam ac consequat orci. Nullam id risus enim. Aenean nisl erat, finibus maximus nunc nec, sollicitudin molestie mauris. Donec eu pulvinar nisl.
-
-Praesent sit amet faucibus diam. Ut fermentum enim quis elit cursus, at bibendum erat scelerisque. Vivamus pulvinar sed arcu id vulputate. Ut suscipit vestibulum magna viverra accumsan. Vivamus diam justo, pellentesque id tortor sit amet, vehicula placerat erat. Curabitur mattis dignissim nulla, pellentesque interdum arcu aliquam sed. Mauris convallis sollicitudin mi, in consequat elit vestibulum eu. Vivamus ac odio pharetra, ultrices mauris sit amet, sodales enim. Vivamus et libero nulla.
-
-Nunc vehicula interdum ex vitae congue. Morbi porta risus vel gravida accumsan. Fusce bibendum velit velit, a accumsan velit luctus ut. Nam ullamcorper ornare tellus in vulputate. Suspendisse accumsan semper eros ut varius. Sed ornare malesuada sapien, quis volutpat turpis pretium non. Morbi vel elit tempus, mollis nisl ullamcorper, elementum nisl. Proin ac libero porttitor, sodales lectus a, varius lectus. Nulla facilisi. Sed ut mi mollis, fringilla ex sit amet, finibus nisi. Fusce elit eros, fermentum ac hendrerit vel, imperdiet ac tortor. Nullam ac ipsum sollicitudin justo hendrerit interdum. Praesent vel nulla laoreet, efficitur lacus in, tristique mauris. Curabitur nulla justo, semper at interdum sed, suscipit vel magna. Nullam accumsan vitae augue a accumsan.
-
-Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nunc cursus risus eu augue tempus interdum. Sed mattis luctus mauris, et tincidunt dui dapibus ac. Sed ut bibendum ipsum. Mauris rhoncus tellus in justo rutrum varius. Donec condimentum dui odio, a pharetra massa pellentesque quis. Donec luctus scelerisque mi, id efficitur velit scelerisque in. Nullam consectetur eros sed risus mollis bibendum. Nulla auctor, nunc vitae hendrerit condimentum, massa ligula lobortis nisl, eget ornare diam urna ut quam. Curabitur nisi purus, elementum nec dui non, pharetra placerat ex. Aliquam erat volutpat. Sed a quam enim. Quisque sit amet purus nec erat volutpat tincidunt in id eros.
-
-Aliquam pharetra placerat est, in efficitur massa euismod nec. Nulla pharetra lacus nibh, sit amet egestas velit convallis a. Etiam eget sollicitudin dolor. Phasellus ac venenatis lectus, at congue libero. Integer euismod non sem ut varius. Vivamus congue eros a orci condimentum congue. Phasellus in orci eu eros convallis finibus. Mauris ut velit quis nulla consectetur ullamcorper. Proin pretium, ligula eu suscipit sollicitudin, enim ex euismod dolor, at imperdiet risus mi nec urna. Maecenas molestie viverra ornare.
-
-Cras at velit leo. Morbi mollis eu mauris eleifend eleifend. Praesent ut tellus leo. Aenean venenatis condimentum consectetur. Morbi ultricies pharetra tempor. Praesent ac sagittis velit. Suspendisse vehicula hendrerit ante quis luctus. Mauris convallis vehicula posuere. Nullam elementum efficitur nisl, at tristique odio cursus id. Sed rhoncus arcu ac lacus semper, sed suscipit dolor varius. Phasellus vehicula laoreet mauris, scelerisque sodales lacus iaculis non. Ut pellentesque lorem elit, non mollis tortor sollicitudin ac.
-
-Aenean sagittis orci mollis arcu sagittis pharetra. Fusce iaculis finibus rutrum. Phasellus ac lorem porttitor, bibendum velit quis, congue lorem. Quisque fermentum tortor metus, in vulputate ante malesuada vel. Mauris in imperdiet orci. Vestibulum congue vulputate dolor, a lacinia justo ornare nec. Nunc posuere fermentum volutpat. Donec tristique nisl a elit eleifend, non tincidunt augue posuere. Nullam justo augue, bibendum sit amet risus id, sagittis egestas odio. Cras luctus, ipsum vitae porttitor consectetur, purus justo dapibus eros, in aliquet sapien leo sit amet lacus. Nullam vestibulum enim ex. Vivamus lectus est, vulputate non dictum ut, tempus non eros. Aenean quis accumsan est. Maecenas et orci at nunc tincidunt consectetur ac pulvinar ligula. Quisque lobortis accumsan cursus. Suspendisse feugiat sem sit amet ex ornare ornare.
-
-Quisque pulvinar tellus ut leo iaculis euismod. Integer ultrices auctor nisl, id viverra arcu tincidunt nec. Ut elit sapien, ornare sit amet purus vel, euismod facilisis libero. Nullam augue turpis, placerat a viverra id, venenatis id ante. Integer lectus dolor, maximus vitae commodo nec, malesuada et turpis. Donec vel egestas nibh. Vestibulum fermentum leo eu malesuada rutrum. Fusce massa arcu, egestas eu malesuada et, finibus nec purus. Phasellus eleifend quis ligula eget porttitor. Pellentesque accumsan fermentum diam, at lobortis orci dapibus at. Suspendisse quis lacus vitae nisl porta viverra. Cras vehicula volutpat nisl nec venenatis. Vestibulum ac ultricies velit. Ut egestas felis eu tincidunt eleifend. Quisque iaculis sollicitudin mattis. Donec hendrerit et ante ut pellentesque.
-
-Duis quis feugiat dolor, eu efficitur arcu. Aenean ac auctor est. Aliquam iaculis leo a convallis scelerisque. Vivamus vel pharetra est, eget mattis sapien. Donec vel magna erat. Nullam nisl purus, mattis id nulla at, aliquam imperdiet metus. Duis mattis bibendum diam vel tristique. Morbi vitae ullamcorper orci. Maecenas blandit eros lorem, sit amet bibendum ante sodales ut. Sed metus justo, tincidunt at ultrices nec, tincidunt nec elit. Aliquam erat volutpat. Nunc eros est, tempor et blandit a, facilisis nec justo. Suspendisse potenti. Maecenas blandit risus quis porta laoreet.
-
-Aliquam purus turpis, venenatis sit amet nulla in, pharetra luctus lectus. Donec lacinia dolor ut ligula scelerisque, sed ornare mauris vehicula. Donec rutrum congue sapien, vitae egestas libero tincidunt vitae. Donec tristique suscipit hendrerit. Suspendisse potenti. Interdum et malesuada fames ac ante ipsum primis in faucibus. Proin et mattis mauris. Donec id erat fringilla, posuere nisi vel, aliquam lectus. Phasellus viverra pellentesque ante nec pellentesque. Aliquam scelerisque euismod ullamcorper. Ut metus tortor, ornare vel eros sit amet, auctor porta odio. Aliquam sed mi eu lorem fringilla convallis et eu turpis. Mauris feugiat risus eu ultrices lobortis. Proin at turpis sed nisl bibendum luctus. Praesent molestie odio sed pharetra consectetur.
-
-Quisque eleifend in libero et pretium. Suspendisse nec sapien nisl. Quisque est ligula, fringilla ut tristique et, gravida in urna. Morbi non turpis augue. Donec euismod odio quis eros pellentesque, id posuere risus auctor. Vivamus vulputate mattis enim, ut mollis diam pretium interdum. Praesent malesuada est quis quam egestas, vel commodo neque auctor. Donec interdum posuere mauris, sit amet sollicitudin est mattis in. Donec vitae porttitor neque. Cras ultrices leo sit amet risus posuere, id venenatis quam fermentum. Nunc tempus, sapien faucibus volutpat iaculis, justo nisl pretium tortor, vitae tristique ligula nisi ut ex.
-
-Aenean eget arcu ipsum. Nam bibendum orci id suscipit placerat. Nunc viverra fermentum sem, eget rhoncus tortor dapibus ut. Maecenas congue rhoncus ipsum sit amet mollis. Vivamus eget arcu at felis venenatis lobortis. Vivamus ultrices, quam vel elementum molestie, felis elit fermentum libero, in laoreet nibh lacus vitae tellus. Donec fermentum lorem a fringilla sodales. In convallis mollis eros, nec viverra risus cursus non. Pellentesque bibendum venenatis auctor. Duis eros ligula, laoreet quis porttitor ut, vehicula id massa. Aliquam tempus justo dolor, nec bibendum velit tempor non. Nam ac facilisis ante, ac mollis nunc. Donec eu euismod dui. Integer feugiat lacus in rhoncus lobortis.
-
-Etiam tincidunt blandit dapibus. Nullam ultricies lacinia aliquam. Etiam consequat ipsum vitae sem finibus tempor. Curabitur volutpat cursus tortor ut placerat. Vivamus eu viverra lectus, vel varius massa. Etiam at vulputate nibh. Morbi fermentum metus id eros rutrum, nec fermentum odio mattis. In vulputate posuere varius. Sed tempor, lorem vel congue faucibus, dolor magna luctus nibh, sed congue urna neque ut nisl. In sed est non eros placerat suscipit eu porttitor magna.
-
-Donec accumsan nisi tempus quam dapibus, et scelerisque tellus posuere. Etiam vitae iaculis lorem. Nulla eget dolor lorem. Etiam tristique lacus mauris, at sodales quam vulputate a. Aenean a tempor felis. Aliquam mollis dui ultrices porta fermentum. Morbi faucibus turpis est, et bibendum felis egestas sit amet. Curabitur ultrices maximus vehicula.
-
-Integer lacinia ante sed arcu vehicula, sit amet convallis neque dictum. Donec et ex vulputate, ultrices lectus vel, commodo sapien. Maecenas fermentum, magna eget tristique hendrerit, libero sem vestibulum quam, quis aliquam mi lorem non ex. Integer nec arcu feugiat, sollicitudin massa vel, rutrum justo. Quisque ornare velit ut ipsum faucibus, quis viverra dui euismod. Fusce a pharetra purus, nec tincidunt augue. Fusce pharetra, purus ac rutrum sagittis, massa arcu placerat odio, sed lobortis ante nibh porta libero. Proin viverra quis massa cursus fermentum. Vivamus condimentum magna porta finibus tristique. Pellentesque aliquet enim at dui laoreet pharetra. Nam lobortis sagittis consequat. Ut dignissim porta eros. Praesent viverra nisi quam, vel sollicitudin diam fermentum eu. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Quisque nec mi sit amet justo eleifend sollicitudin ac vitae dolor. Vestibulum ut luctus turpis.
-
-Morbi venenatis purus eget enim sagittis imperdiet. Quisque cursus aliquam euismod. Fusce condimentum nulla a molestie fermentum. Vivamus accumsan enim sit amet massa laoreet, molestie maximus lectus pellentesque. Vivamus vel nisl ac velit cursus posuere. Duis maximus diam a massa interdum pulvinar. Etiam bibendum dui vel cursus finibus. Praesent vestibulum tincidunt placerat. Vivamus rutrum, ipsum sed aliquet hendrerit, justo dolor rutrum nisl, ut lobortis nulla velit et felis. Maecenas venenatis mattis elementum. Maecenas lacinia mattis elit, vitae semper est auctor sit amet.
-
-Maecenas suscipit augue erat, lacinia tincidunt tortor sodales nec. Phasellus euismod cursus ipsum, vel aliquet nisl pulvinar sed. Donec sit amet varius nunc. Quisque sem nibh, fringilla sed eros a, placerat auctor tellus. Curabitur in diam est. Suspendisse eget turpis quis erat dictum rutrum a in nisl. Aliquam tincidunt, tellus at sagittis blandit, diam nisi tempus magna, sit amet facilisis urna purus vitae arcu. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nam vitae sapien lorem.
-
-Etiam vestibulum efficitur laoreet. Donec varius nisi ut felis eleifend imperdiet. Nulla facilisi. Sed porttitor efficitur mi nec aliquam. Sed quis malesuada magna. Nulla pharetra molestie risus, eu viverra leo. Morbi nec nisi justo. Nullam malesuada dui in tellus dapibus vehicula. Donec tortor nulla, semper ut accumsan nec, porttitor nec eros. Pellentesque interdum ornare elit quis vehicula. Donec vitae nunc egestas, placerat est eu, ultrices dui. Duis euismod pulvinar urna, fringilla scelerisque leo condimentum quis.
-
-Etiam ac posuere orci, ut placerat nunc. Donec consequat enim sed mollis ultrices. Nulla ac est facilisis, elementum lacus eu, elementum mauris. Phasellus rutrum metus est, ut consectetur nisl viverra ac. Etiam nec risus id velit molestie pretium. Fusce mi purus, gravida ac hendrerit in, tempus congue enim. Integer malesuada id ante a sagittis. Vestibulum a elementum nulla. Proin blandit est sed cursus fermentum. Sed id semper eros, eget pretium quam. Etiam placerat porta ipsum, eget convallis magna scelerisque non. Cras egestas diam eu auctor vehicula. Nulla et tellus est.
+       <!-- Your content here -->
+       Lorem ipsum dolor sit amet...
     </div>    
   </div>
 </main>
@@ -115,22 +187,252 @@ dfhdf
 
 </div>
 
+<!-- Hidden Google Translate widget -->
+<div id="google_translate_element" style="display:none;"></div>
 
+<!-- Google Translate Script with fallback -->
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <script>
-function getAppAuth(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } }
-function refreshAuthUI(){ const a=getAppAuth(); const echo=document.getElementById('user-echo'); const inBtn=document.getElementById('sign-in-btn'); const outBtn=document.getElementById('sign-out-btn'); if(a){ echo.textContent = 'Logged in as ' + (a.username||''); inBtn.style.display='none'; outBtn.style.display=''; } else { echo.textContent='Read-only mode'; inBtn.style.display=''; outBtn.style.display='none'; } }
-document.getElementById('sign-out-btn').addEventListener('click', ()=>{ try{ sessionStorage.removeItem('app_auth'); sessionStorage.removeItem('cedb_auth'); }catch(_e){} refreshAuthUI(); window.location.href='login.html' })
-refreshAuthUI()
+// FIXED: Safe initialization to prevent null errors
+document.addEventListener('DOMContentLoaded', function() {
+    // Only initialize translation widget if elements exist
+    initTranslationWidget();
+    
+    // FIXED: Only run auth functions if elements exist
+    try {
+        // Check if auth elements exist before using them
+        const signOutBtn = document.getElementById('sign-out-btn');
+        if (signOutBtn) {
+            signOutBtn.addEventListener('click', function() {
+                try {
+                    sessionStorage.removeItem('app_auth');
+                    sessionStorage.removeItem('cedb_auth');
+                } catch(e) {
+                    console.error('Error clearing auth:', e);
+                }
+                refreshAuthUI();
+                window.location.href = 'login.html';
+            });
+        }
+        
+        // Initialize auth UI if elements exist
+        refreshAuthUI();
+    } catch(e) {
+        console.log('Auth UI not available or commented out');
+    }
+});
+
+// Translation Widget Functions
+function initTranslationWidget() {
+    // Only initialize if translation elements exist
+    const languageBtn = document.querySelector('.language-btn');
+    const languageDropdown = document.querySelector('.language-dropdown');
+    
+    if (!languageBtn || !languageDropdown) {
+        console.warn('Translation widget elements not found');
+        return;
+    }
+    
+    // Toggle custom dropdown
+    languageBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        languageDropdown.classList.toggle('show');
+    });
+    
+    // Add click handlers to language options
+    document.querySelectorAll('.language-dropdown a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const lang = this.getAttribute('data-lang');
+            changeLanguage(lang);
+            languageDropdown.classList.remove('show');
+        });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.language-selector')) {
+            languageDropdown.classList.remove('show');
+        }
+    });
+}
+
+// FIXED: Safe auth functions
+function getAppAuth() { 
+    try { 
+        return JSON.parse(sessionStorage.getItem('app_auth') || 'null'); 
+    } catch(_) { 
+        return null; 
+    } 
+}
+
+function refreshAuthUI() {
+    try {
+        const a = getAppAuth();
+        const echo = document.getElementById('user-echo');
+        const inBtn = document.getElementById('sign-in-btn');
+        const outBtn = document.getElementById('sign-out-btn');
+        
+        // Only update if elements exist
+        if (echo && inBtn && outBtn) {
+            if (a) {
+                echo.textContent = 'Logged in as ' + (a.username || '');
+                inBtn.style.display = 'none';
+                outBtn.style.display = '';
+            } else {
+                echo.textContent = 'Read-only mode';
+                inBtn.style.display = '';
+                outBtn.style.display = 'none';
+            }
+        }
+    } catch(e) {
+        console.log('Auth UI elements not found');
+    }
+}
+
+// Google Translate initialization
+function googleTranslateElementInit() {
+    try {
+        new google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'tl,en,fr',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false
+        }, 'google_translate_element');
+        
+        // Hide the Google Translate dropdown
+        const style = document.createElement('style');
+        style.textContent = '.goog-te-combo { display: none !important; }';
+        document.head.appendChild(style);
+        
+        console.log('Google Translate initialized');
+    } catch(error) {
+        console.error('Failed to initialize Google Translate:', error);
+        showTranslationFallback();
+    }
+}
+
+// Improved changeLanguage function with retry logic
+function changeLanguage(lang) {
+    console.log('Changing language to:', lang);
+    
+    function attemptTranslate() {
+        const select = document.querySelector('.goog-te-combo');
+        if (select && select.value !== lang) {
+            select.value = lang;
+            select.dispatchEvent(new Event('change'));
+            console.log('Language changed successfully');
+            
+            // Update button text based on selected language
+            const langNames = {
+                'en': '🇺🇸 English',
+                'tl': '🇵🇭 Tagalog',
+                'fr': '🇫🇷 French'
+            };
+            const btnText = document.querySelector('.language-btn');
+            if (btnText && langNames[lang]) {
+                btnText.innerHTML = `🌐 ${langNames[lang].split(' ')[1]} <span class="arrow">▼</span>`;
+            }
+            
+            return true;
+        }
+        return false;
+    }
+    
+    // Try immediately
+    if (attemptTranslate()) return;
+    
+    // If not ready, try every 100ms for 5 seconds
+    let attempts = 0;
+    const maxAttempts = 50;
+    const interval = setInterval(() => {
+        attempts++;
+        if (attemptTranslate()) {
+            clearInterval(interval);
+        } else if (attempts >= maxAttempts) {
+            console.error('Failed to change language: Google Translate widget not found');
+            clearInterval(interval);
+            showTranslationFallback(lang);
+        }
+    }, 100);
+}
+
+// Fallback function if Google Translate fails
+function showTranslationFallback(lang = 'tl') {
+    const fallbackMsg = document.createElement('div');
+    fallbackMsg.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #ff6b35;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    fallbackMsg.innerHTML = `
+        Translate failed. 
+        <a href="https://translate.google.com/translate?hl=${lang}&sl=auto&tl=${lang}&u=${encodeURIComponent(window.location.href)}" 
+           target="_blank" 
+           style="color: white; text-decoration: underline; margin-left: 5px;">
+           Click here to translate
+        </a>
+    `;
+    document.body.appendChild(fallbackMsg);
+    
+    // Remove after 10 seconds
+    setTimeout(() => {
+        if (fallbackMsg.parentNode) {
+            fallbackMsg.parentNode.removeChild(fallbackMsg);
+        }
+    }, 10000);
+}
+
+// Handle Google Translate errors
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    // Ignore Google Translate tracking errors (they're often blocked by ad blockers)
+    if (msg.includes('translate.googleapis.com') || 
+        msg.includes('ERR_BLOCKED_BY_CLIENT') ||
+        url.includes('translate.googleapis.com')) {
+        console.log('Google Translate tracking error (likely blocked by ad blocker)');
+        return true; // Prevent error from showing in console
+    }
+    return false; // Let other errors through
+};
+
+// Alternative: Use MutationObserver to handle dynamic Google Translate elements
+if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                // Check if Google Translate elements were added
+                const googleElements = document.querySelector('.goog-te-combo, .goog-te-banner-frame');
+                if (googleElements) {
+                    // Ensure our styles override Google's
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        .goog-te-banner-frame,
+                        .goog-te-menu-value,
+                        .goog-te-gadget-icon,
+                        .goog-te-combo {
+                            display: none !important;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
 </script>
 
-<!---
-<div id="json-output" style="display:none"></div>
-<div style="margin:8px 0">
-  <button id="refresh-btn" style="display: none;">Refresh</button>
-  <button id="save-btn" style="display: none;">Save</button>
-  <span id="status" style="margin-left:12px"></span>
-</div>
--->
 </body>
 </html>
