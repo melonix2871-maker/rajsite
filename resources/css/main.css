@@ -236,7 +236,7 @@ header #login-btn a:hover{
 }
 
 #cabinet{
-  background: #fff;
+  background: #272727;
   margin: 10px 0;
   border-radius: 8px;
   padding: 20px;
@@ -249,7 +249,7 @@ header #login-btn a:hover{
 
 /* Stories Block */
 #stories-block{
-    margin-top: 20px;
+    margin-top: 0px;
     padding: 0 10px;
     position: relative;
     z-index: 1;
@@ -467,4 +467,100 @@ header #login-btn a:hover{
     position: relative !important;
     top: auto !important;
   }
+}
+
+
+div#story-title-bar {
+    background: #222;
+    padding: 10px;
+    text-transform: uppercase;
+    color: #f58b01;
+    font-size: 12px;
+    border-bottom: solid 1px rgba(255, 255, 255, 0.2);
+}
+
+
+.toggle-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  border-radius: .5em;
+  padding: .125em;
+}
+
+.toggle-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  z-index: 1;
+  border-radius: inherit;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-radius: .375em;
+  width: 3em;
+  height: 1.5em;
+  background-color: #6d685e;
+  box-shadow: 
+    inset 0 0 .0625em .125em rgb(255 255 255 / .2),
+    inset 0 .0625em .125em rgb(0 0 0 / .4),
+  ;
+  transition: background-color .4s linear;
+  
+  .toggle-checkbox:checked + & {
+    background-color: #f58b01;
+  }
+}
+
+.toggle-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  left: .0625em;
+  border-radius: .3125em;
+  width: 1.375em;
+  height: 1.375em;
+  background-color: #e4ddcf;
+  box-shadow:
+    inset 0 -.0625em .0625em .125em rgb(0 0 0 / .1),
+    inset 0 -.125em .0625em rgb(0 0 0 / .2),
+    inset 0 .1875em .0625em rgb(255 255 255 / .3),
+    0 .125em .125em rgb(0 0 0 / .5),
+  ;
+  transition: left .4s/*cubic-bezier(.65, 1.35, .5, 1)*/;
+  
+  .toggle-checkbox:checked + .toggle-container > & {
+    left: 1.5625em;
+  }
+}
+
+.toggle-button-circles-container {
+  display: grid;
+  grid-template-columns: repeat(3, min-content);
+  gap: .125em;
+  position: absolute;
+  margin: 0 auto;
+}
+
+.toggle-button-circle {
+  border-radius: 50%;
+  width: .125em;
+  height: .125em;
+  background-image: radial-gradient(circle at 50% 0, #f6f0e9, #bebcb0);
+}
+
+.language-selector {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    gap: 8px;
 }
