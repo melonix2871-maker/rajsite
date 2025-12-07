@@ -286,6 +286,7 @@ async function tryLogin(username, password){
         if(!ok){ ok = (String(passrec.metavalue||'')===String(password)) }
         if(ok){
           sessionStorage.setItem('app_auth', JSON.stringify({ role:'user', username, relid:Number(urec.relid||0) }))
+          try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password))) }catch(_){ }
           window.location.href='index.html'
           return
         }
