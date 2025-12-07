@@ -133,6 +133,27 @@ header #login-btn a:hover {
     transform: translateY(-2px);
 }
 
+header #logout-btn a{
+    background: #444;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 800;
+    width: 100%;
+    display: block;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 16px;
+    padding: 10px 8px;
+    border-radius: 8px;
+    margin-top: 8px;
+    border: 1px solid #666;
+    transition: all 0.3s ease;
+}
+
+header #logout-btn a:hover{
+    background: #555;
+}
+
 /* Main Content Area */
 #site-content {
     position: relative;

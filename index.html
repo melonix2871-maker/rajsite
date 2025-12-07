@@ -269,6 +269,27 @@ translate.execute();
 </script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+  let uname='';
+  try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && app.username){ uname=String(app.username) } }catch(_){}
+  const loginLinks = Array.from(document.querySelectorAll('#login-btn a'));
+  if(loginLinks.length){
+    if(uname){
+      loginLinks.forEach(a=>{ a.textContent = 'Welcome To KL, ' + uname; a.setAttribute('href','./index.html') })
+      let lgc = document.getElementById('logout-btn');
+      if(!lgc){ lgc = document.createElement('div'); lgc.id = 'logout-btn'; const parent = document.querySelector('.tabdesk-header #header-content'); if(parent) parent.appendChild(lgc) }
+      lgc.innerHTML = '<a href="#" id="logout-link">Logout</a>'
+      const lnk = document.getElementById('logout-link');
+      if(lnk){ lnk.addEventListener('click', (e)=>{ e.preventDefault(); try{ sessionStorage.removeItem('app_auth'); sessionStorage.removeItem('cedb_auth') }catch(_e){} window.location.href = './login.html' }) }
+      const mobileUl = document.querySelector('#mobile-menu-dp ul');
+      if(mobileUl && !document.getElementById('logout-menu-item')){
+        const li = document.createElement('li'); li.id='logout-menu-item'; const a=document.createElement('a'); a.textContent='🍺 Logout'; a.href='#'; a.addEventListener('click',(e)=>{ e.preventDefault(); try{ sessionStorage.removeItem('app_auth'); sessionStorage.removeItem('cedb_auth') }catch(_e){} window.location.href='./login.html' }); li.appendChild(a); mobileUl.appendChild(li);
+      }
+    } else {
+      loginLinks.forEach(a=>{ a.textContent = a.textContent.includes('🍺') ? '🍺 Login' : 'Login'; a.setAttribute('href','./login.html') })
+      const lgc = document.getElementById('logout-btn'); if(lgc) lgc.remove();
+      const li = document.getElementById('logout-menu-item'); if(li) li.remove();
+    }
+  }
   const moreButton = document.querySelector('.more');
   const verticalNav = document.getElementById('verticalNav');
   
