@@ -4,33 +4,240 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Login</title>
+  <title>Kwentong Lasing. Serves Beer Daily!</title>
+  <link rel="icon" type="image/png" href="./resources/img/icon.png" />
+  <link rel="stylesheet" href="./resources/css/main.css">
+
 </head>
 <body>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-  <img alt="Logo" width="36" height="36" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%230066ff'/%3E%3Ctext x='18' y='23' font-size='16' text-anchor='middle' fill='white' font-family='Arial'%3EJ%3C/text%3E%3C/svg%3E">
-  <span style="font-size:18px;font-weight:600">Admin Login</span>
-</div>
-<h1>Login</h1>
+  <!-- Auth UI is commented out in your original code -->
+  <!--
+  <div id="auth-ui" style="margin-bottom:12px">
+    <span id="user-echo">Read-only mode</span>
+    <button id="sign-in-btn" onclick="window.location.href='login.html'">Admin Login</button>
+    <button id="sign-out-btn" style="display:none">Sign out</button>
+  </div>
+  -->
+
+<div id="page-wrapper" class="container">
+
+  <header id="site-header" class="tabdesk-header">
+    <div id="header-content">
+       <a href="./"><img width="190" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
+       <h3>The New Gig For The Drunkards.</h3>
+        <ul>
+          <li><a class="ignore" href="./index.html">🍺 Home</a></li>        
+          <li><a class="ignore" href="./community.html">🍺 FAQ</a></li>   
+          <li><a href="./rules.html">🍺 Rules & Regulations</a></li>      
+        </ul>
+        <div id="login-btn">
+          <a class="ignore" href="./login.html">Login</a>
+        </div>
+
+        <div id="online-users-counter" class="ignore"><span class="circ"></span> <b>125</b> users online now</div>
+
+        <div id="kl_exchange">
+          <h4 class="ignore">Beer Exchange 🍺 = 💵 </h4>
+           <ul>
+             <li> 1 Bottle = <span id="conversion" class="ignore">$5</span></li>
+             <li> 1 Bucket = <span id="conversion" class="ignore">$30</span></li>
+             <li> 1 Case = <span id="conversion" class="ignore">$60</span></li>
+           </ul>
+        </div>
+
+        <!-- ADDED TRANSLATION WIDGET HERE -->
+        <small class="ignore" style="text-align: center; text-transform: uppercase;margin-bottom: -12px;font-weight: bold;">Select Language:</small>
+        <div class="switchlang ignore">
+	    <a href="javascript:translate.changeLanguage('english');"><img width="15" src="./resources/img/flags/us.svg"/></a>
+     	<a href="javascript:translate.changeLanguage('filipino');"><img width="15" src="./resources/img/flags/ph.svg"/></a>
+	    <a href="javascript:translate.changeLanguage('chinese_traditional');"><img width="15" src="./resources/img/flags/cn.svg"/></a>
+      <a href="javascript:translate.changeLanguage('french');"><img width="15" src="./resources/img/flags/fr.svg"/></a>
+      <a href="javascript:translate.changeLanguage('spanish');"><img width="15" src="./resources/img/flags/es.svg"/></a>
+      <a href="javascript:translate.changeLanguage('italian');"><img width="15" src="./resources/img/flags/it.svg"/></a>
+      <a href="javascript:translate.changeLanguage('hindi');"><img width="15" src="./resources/img/flags/in.svg"/></a>
+      <a href="javascript:translate.changeLanguage('russian');"><img width="15" src="./resources/img/flags/ru.svg"/></a>
+      <a href="javascript:translate.changeLanguage('japanese');"><img width="15" src="./resources/img/flags/jp.svg"/></a>
+      <a href="javascript:translate.changeLanguage('korean');"><img width="15" src="./resources/img/flags/kr.svg"/></a>     
+
+        </div>
+        <!-- END TRANSLATION WIDGET -->
+
+      </div>
+  </header>
+
+  <header id="site-header" class="mobile-header">
+   <div id="kl_exchange_mobile_marquee">
+  <div class="marquee-content">
+    <!-- Original content -->
+    <div class="marquee-inner">
+      <h4 class="ignore">Beer Exchange 🍺 = 💵</h4>
+      <div>1 Bottle = <span class="ignore">$5</span></div>
+      <div>1 Bucket = <span class="ignore">$30</span></div>
+      <div>1 Case = <span class="ignore">$60</span></div>
+    </div>
+    <!-- Duplicate for seamless loop -->
+    <div class="marquee-inner" aria-hidden="true">
+      <h4 class="ignore">Beer Exchange 🍺 = 💵</h4>
+      <div>1 Bottle = <span class="ignore">$5</span></div>
+      <div>1 Bucket = <span class="ignore">$30</span></div>
+      <div>1 Case = <span class="ignore">$60</span></div>
+    </div>
+  </div>
+</div>  
+    <img style="width:100%;" src="./resources/img/hero_img.jpg" alt="Kwentong Lasing">
+    <div id="header-content">
+      <div id="logo-mobile">
+       <a href="./"><img width="190" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
+       <button id="menu-toggle-btn"><img src="./resources/img/menu.svg"/></button>
+      </div>
+
+      <div id="mobile-menu-dp">
+		    <ul>
+          <li><a class="ignore" href="./index.html">🍺 Home</a></li>        
+          <li><a class="ignore" href="./community.html">🍺 FAQ</a></li>   
+          <li><a href="./rules.html">🍺 Rules & Regulations</a></li> 
+           <li id="login-btn"><a class="ignore" href="./login.html">🍺 Login</a></li>		  
+        </ul>
+		</div>
+
+       <div id="flags-mobile">
+         <!-- ADDED TRANSLATION WIDGET HERE -->
+        <small class="ignore" style="text-align: center; text-transform: uppercase;margin-bottom: -12px;font-weight: bold;">Select Language:</small>
+        <div class="switchlang ignore" style="width: 100%;">
+	    <a href="javascript:translate.changeLanguage('english');"><img width="15" src="./resources/img/flags/us.svg"/></a>
+     	<a href="javascript:translate.changeLanguage('filipino');"><img width="15" src="./resources/img/flags/ph.svg"/></a>
+	    <a href="javascript:translate.changeLanguage('chinese_traditional');"><img width="15" src="./resources/img/flags/cn.svg"/></a>
+      <a href="javascript:translate.changeLanguage('french');"><img width="15" src="./resources/img/flags/fr.svg"/></a>
+      <a href="javascript:translate.changeLanguage('spanish');"><img width="15" src="./resources/img/flags/es.svg"/></a>
+      <a href="javascript:translate.changeLanguage('italian');"><img width="15" src="./resources/img/flags/it.svg"/></a>
+      <a href="javascript:translate.changeLanguage('hindi');"><img width="15" src="./resources/img/flags/in.svg"/></a>
+      <a href="javascript:translate.changeLanguage('russian');"><img width="15" src="./resources/img/flags/ru.svg"/></a>
+      <a href="javascript:translate.changeLanguage('japanese');"><img width="15" src="./resources/img/flags/jp.svg"/></a>
+      <a href="javascript:translate.changeLanguage('korean');"><img width="15" src="./resources/img/flags/kr.svg"/></a>     
+
+        </div>
+        <!-- END TRANSLATION WIDGET -->
+         </div>
+       <h3>The New Gig For The Drunkards.</h3>               
+        <div id="online-users-counter" class="ignore"><span class="circ"></span> <b>125</b> users online now</div>
+      </div>
+  </header>
+
+<main id="site-content">
+<div id="header-hero-block">
+  <img src="./resources/img/hero_img.jpg" alt="Kwentong Lasing"> 
+  <div id="story-title-bar">
+    <h1>Login</h1>
+  </div>
 <div id="status" style="margin-bottom:12px"></div>
-<form id="login-form" style="margin-top:12px;max-width:360px">
+<form id="login-form">
   <input type="hidden" id="csrf-login-token" name="csrf_token">
-  <label style="display:block;margin:8px 0">Username <input id="login-username" autocomplete="username"></label>
-  <label style="display:block;margin:8px 0">Password <input id="login-password" type="password" autocomplete="current-password"></label>
+  <label>Username <input id="login-username" autocomplete="username"></label>
+  <label>Password <input id="login-password" type="password" autocomplete="current-password"></label>
   <button type="submit">Sign In</button>
 </form>
-<div style="margin-top:24px">
-  <h2>Register</h2>
-  <form id="register-form" style="margin-top:12px;max-width:360px">
+<div id="or-divider">OR</div>
+<div style="margin-top:34px">
+   <div id="story-title-bar">
+    <h1>Register</h1>
+  </div>
+   <div id="register-status" style="margin-top:8px"></div>
+  <form id="register-form">
     <input type="hidden" id="csrf-register-token" name="csrf_token">
-    <label style="display:block;margin:8px 0">Username <input id="reg-username" autocomplete="username"></label>
-    <label style="display:block;margin:8px 0">Password <input id="reg-password" type="password" autocomplete="new-password"></label>
-    <label style="display:block;margin:8px 0">Confirm <input id="reg-confirm" type="password" autocomplete="new-password"></label>
+    <label>Username <input id="reg-username" autocomplete="username"></label>
+    <label>Password <input id="reg-password" type="password" autocomplete="new-password"></label>
+    <label>Confirm <input id="reg-confirm" type="password" autocomplete="new-password"></label>
     <button type="submit">Create Account</button>
   </form>
-  <div id="register-status" style="margin-top:8px"></div>
+ 
 </div>
-<div style="margin-top:12px"><a href="index.html">Back to Home</a></div>
+
+<div id="copyright" class="tabdesk-copyright">
+    <div class="divider"></div>
+    <div id="footer-logo">
+      <img width="150" src="./resources/img/footer_logo.png" alt="Kwentong Lasing">
+    </div>
+    <ul>
+      <li><a class="ignore" href="./index.html">Home</a></li>        
+      <li><a class="ignore" href="./community.html">FAQ</a></li>   
+      <li><a href="./rules.html">Rules & Regulations</a></li>
+      <li><a href="#">Donate</a></li>
+      <li><a href="#">Updates</a></li>
+      <li><a href="#">Advertise</a></li>
+      <li><a href="#">Merch</a></li>
+      <li><a href="#">Privacy Policy</a></li>
+      <li><a href="#">Terms</a></li>
+    </ul>
+    <p class="ignore">&copy; Copyright <script>document.write(new Date().getFullYear())</script> Kwentong Lasing Community. All Rights reserved.</p>
+    <p class="ignore">A Romeo Asis Production</p>
+  </div>
+</main>
+
+<div id="cabinet-block">
+<div id="cabinet">
+   <div id="side-widget">
+      <h3>🍺 Join Our Community</h3>
+      <p>Spill your 'Kwentong Lasing' here—where legendary stories get the applause they deserve! Join now and let’s turn tipsy tales into cash.</p>      
+    </div>
+
+   <div id="side-widget">
+     <h3>🍺 Trending</h3>
+     <ul class="trending-list">
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> Why do I always get drunk at family gatherings?</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> That time I got so drunk I tried to marry a lamp post</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> The Great Beer Spill of 2023: A Tragicomedy</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> How I ended up in a karaoke contest with a parrot</a></li>
+        <li><a href="#"><img class="use32_avatar" width="32" src="https://i.pravatar.cc/40"/> The time I mistook a fire hydrant for a urinal</a></li>
+     </ul>
+
+   </div>
+
+   <div id="side-widget" class="ads_block">
+     <h3>🍺 Advertisement</h3>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+      <div id="ad-space">
+        <img src="./resources/img/ad_placeholder.png" alt="Advertise Here"/>
+      </div>
+   </div>
+   
+</div>
+</div>
+
+<div id="copyright" class="mobile-copyright">
+    <div class="divider"></div>
+    <div id="footer-logo">
+      <img width="150" src="./resources/img/footer_logo.png" alt="Kwentong Lasing">
+    </div>
+    <ul>
+      <li><a class="ignore" href="./index.html">Home</a></li>        
+      <li><a class="ignore" href="./community.html">FAQ</a></li>   
+      <li><a href="./rules.html">Rules & Regulations</a></li>
+      <li><a href="#">Donate</a></li>
+      <li><a href="#">Updates</a></li>
+      <li><a href="#">Advertise</a></li>
+      <li><a href="#">Merch</a></li>
+      <li><a href="#">Privacy Policy</a></li>
+      <li><a href="#">Terms</a></li>
+    </ul>
+    <p class="ignore">&copy; Copyright <script>document.write(new Date().getFullYear())</script> Kwentong Lasing Community. All Rights reserved.</p>
+    <p class="ignore">A Romeo Asis Production</p>
+  </div>
+
+
+
+
+</div>
+
+
+
 <script>
 const WRITE_CONFIG_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/config.json'
 const WRITE_DB_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
@@ -126,6 +333,73 @@ document.getElementById('register-form').addEventListener('submit', async (e)=>{
   const a=document.getElementById('csrf-login-token'); if(a) a.value = t;
   const b=document.getElementById('csrf-register-token'); if(b) b.value = t;
 })();
+</script>
+
+<script src="https://translate.zvo.cn/static/translate.min.js"></script>
+<script>
+translate.element.tagAttribute['textarea']=['placeholder'];
+translate.ignore.class.push('botts');
+translate.language.setLocal('english');
+translate.service.use('client.edge');
+translate.listener.start();
+translate.execute();
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+  //const moreButton = document.querySelector('.more');
+  //const verticalNav = document.getElementById('verticalNav');
+  
+  //moreButton.addEventListener('click', function(e) {
+    //e.stopPropagation(); // Prevent event bubbling
+    
+    // Toggle the navigation visibility
+    //if (verticalNav.style.display === 'none' || verticalNav.style.display === '') {
+    //  verticalNav.style.display = 'block';
+   // } else {
+    //  verticalNav.style.display = 'none';
+  //  }
+  //});
+  
+  // Close nav when clicking anywhere outside
+  document.addEventListener('click', function(e) {
+    if (!verticalNav.contains(e.target) && !moreButton.contains(e.target)) {
+      verticalNav.style.display = 'none';
+    }
+  });
+  
+  // Optional: Close nav when clicking on a link
+  const navLinks = document.querySelectorAll('.nav-link');
+  navLinks.forEach(link => {
+    link.addEventListener('click', function() {
+      verticalNav.style.display = 'none';
+    });
+  });
+
+// Get the button and menu elements
+const menuToggleBtn = document.getElementById('menu-toggle-btn');
+const mobileMenu = document.getElementById('mobile-menu-dp');
+
+// Add click event listener to the button
+menuToggleBtn.addEventListener('click', function(event) {
+    // Toggle the display of the mobile menu
+    if (mobileMenu.style.display === 'none' || mobileMenu.style.display === '') {
+        mobileMenu.style.display = 'block';
+    } else {
+        mobileMenu.style.display = 'none';
+    }
+    
+    // Optional: Prevent event bubbling if needed
+    event.stopPropagation();
+});
+
+// Optional: Close menu when clicking outside
+document.addEventListener('click', function(event) {
+    if (!mobileMenu.contains(event.target) && !menuToggleBtn.contains(event.target)) {
+        mobileMenu.style.display = 'none';
+    }
+});
+
+});
 </script>
 </body>
 </html>

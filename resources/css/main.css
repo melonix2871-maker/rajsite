@@ -798,6 +798,7 @@ div#story-title-bar {
   color: #fbd491;
 }
 
+
 #kl_exchange h4{
   text-transform: uppercase;
   font-size: 13px;
@@ -1223,4 +1224,122 @@ header.mobile-header {
     #copyright ul a:hover{
    color: #fff !important;
   }
+}
+
+
+#footer-logo img{
+  width: 150px;
+  margin: 0 auto;
+}
+
+
+#login-form label{
+  display: block;
+  margin-bottom: 10px;  
+}
+
+#login-form label input{
+  display: block;
+  width: 100%;
+  padding: 12px 8px;
+  border-radius: 5px;
+  border: solid 1px #f16d00;
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+#login-form{
+  max-width: 480px;
+  margin: 20px auto 0;
+}
+
+
+#login-form button{
+  background: #f58b01;
+  color: #222;
+  text-decoration: none;
+  font-weight: 800;
+  width: 100%;
+  display: block;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 20px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+
+#register-form label{
+  display: block;
+  margin-bottom: 10px;  
+}
+
+#register-form label input{
+  display: block;
+  width: 100%;
+  padding: 12px 8px;
+  border-radius: 5px;
+  border: solid 1px #f16d00;
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+#register-form{
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+
+#register-form button{
+  background: #f58b01;
+  color: #222;
+  text-decoration: none;
+  font-weight: 800;
+  width: 100%;
+  display: block;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 20px;
+  padding: 12px 8px;
+  border-radius: 8px;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+#login-form{
+  padding-bottom: 20px;
+}
+
+#status, #register-status{
+  text-align: center;;
+  display: block;
+  margin-top: 40px !important;
+  background:#333 !important;
+  padding: 15px;
+  border-radius: 5px;
+  display: none;
+}
+
+#register-form{
+  padding-top: 0px !important;
+  margin-top: 20px !important;
+  margin-bottom: 100px !important;
+}
+
+#or-divider{
+  background: transparent;
+  padding: 20px 10px;
+  text-align: center;
+  width: 60px;
+  margin: 20px auto 50px;
+  border-radius: 50%;
+  border: solid 1px #888;
+  font-weight: bold;
+  letter-spacing: 2px;
 }
