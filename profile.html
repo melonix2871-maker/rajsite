@@ -174,7 +174,7 @@ function postDonations(all, postId){
   const d = all.filter(r => 
     String(r.prefix || '') === 'donate_' && 
     String(r.collection || '') === 'post' && 
-    Number(r.relid || 0) === Number(postId || 0)
+    String(r.relid || '') === String(postId || '')
   );
   
   const totals = d.reduce((m, r) => {

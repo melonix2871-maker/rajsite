@@ -75,7 +75,7 @@
     </div>
   </div>
 </div>
-
+<script src="https://js.stripe.com/v3"></script>
 <script type="module">
 import { DB, WriteQueue, buildAdapterFromConfig, resizeToDataUrl } from './coreenginedb/client.js'
 
@@ -95,7 +95,7 @@ async function main(){ const auth=ensureLogged(); if(!auth) return; setLoginUI()
 
   document.getElementById('avatar-save').addEventListener('click', async ()=>{ const f=document.getElementById('avatar-file').files[0]; const msg=document.getElementById('avatar-msg'); if(!f){ msg.textContent='Choose an image'; return } try{ const dataUrl=await resizeToDataUrl(f,128,'image/webp',0.7); avatarPreview.src=dataUrl; const rel=Number(auth.relid||0); let rows=data.slice(); const existing=rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='avatar'); const now=new Date().toISOString(); if(existing){ existing.metavalue=dataUrl; existing.updateddate=now } else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'app_', collection:'users', metakey:'avatar', metavalue:dataUrl, createddate: now, updateddate: now }) } await adapter.write(rows); msg.textContent='Saved'; }catch(e){ msg.textContent='Save failed' } })
 
-  document.querySelectorAll('[data-amt]').forEach(btn=>{ btn.addEventListener('click', async ()=>{ const amt=Number(btn.getAttribute('data-amt')||'0'); const msg=document.getElementById('wallet-msg'); try{ const r=await fetch('https://coreenginedb.meoasis2014.workers.dev/wallet/topup', { method:'POST', headers:{ 'Content-Type':'application/json', ...(config.http&&config.http.headers)||{} }, body: JSON.stringify({ amount: amt, username: auth.username }) }); const j=r.ok? await r.json() : null; if(j && j.url){ window.location.href = j.url } else { msg.textContent='Top-up initialized' } }catch(_){ msg.textContent='Top-up error' } }) })
+  document.querySelectorAll('[data-amt]').forEach(btn=>{ btn.addEventListener('click', async ()=>{ const amt=Number(btn.getAttribute('data-amt')||'0'); const msg=document.getElementById('wallet-msg'); try{ const res=await fetch('https://coreenginedb.meoasis2014.workers.dev/json/config.json',{ headers:{ ...(config.http&&config.http.headers)||{} } }); const cfg=res.ok? await res.json():{}; const s=(cfg&&cfg.stripe)||{}; const pub=s.publishableKey||''; const prices=s.prices||{}; let priceId=''; if(amt===5) priceId=prices.bottle||''; else if(amt===30) priceId=prices.bucket||''; else if(amt===60) priceId=prices.case||''; if(!pub){ msg.textContent='Stripe not configured'; return } const stripe=window.Stripe(pub); const success=location.origin+'/dashboard.html?payment=success'; const cancel=location.origin+'/dashboard.html?payment=cancel'; if(priceId){ const { error } = await stripe.redirectToCheckout({ mode:'payment', lineItems:[{ price: priceId, quantity:1 }], successUrl: success, cancelUrl: cancel }); if(error){ msg.textContent='Checkout error' } } else { msg.textContent='Amount not available via Checkout' } }catch(_){ msg.textContent='Top-up error' } }) })
 }
 
 main()
