@@ -131,6 +131,9 @@ function setLoginUI(){
       }
       
       if(navDashboard) navDashboard.style.display = 'block';
+      // Hide static Dashboard link to prevent duplicates
+      const staticDash = document.querySelector('nav ul li a[href="./dashboard.html"]');
+      if(staticDash && staticDash.closest('#nav-dashboard')===null){ const li=staticDash.closest('li'); if(li) li.style.display='none' }
     }
   }catch(_){}
 }
