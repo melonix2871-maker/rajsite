@@ -267,6 +267,19 @@ translate.service.use('client.edge');
 translate.listener.start();
 translate.execute();
 </script>
+<script type="module">
+import { DB, WriteQueue, buildAdapterFromConfig } from './coreenginedb/client.js'
+let config={}
+async function loadConfig(){ try{ const r=await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok) config=await r.json() }catch(_){} if(!config.defaultPrefix) config.defaultPrefix='app_'; config.snapshotUrl='https://coreenginedb.meoasis2014.workers.dev/json/public.db.json'; if(!config.http) config.http={}; config.http.url='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method='PUT'; try{ const a=sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization=a } }catch(_){} }
+function authUser(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } }
+function authorByRel(all, rel){ const urec=all.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===Number(rel||0)&&String(r.metakey||'')==='username'); const avatar=all.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===Number(rel||0)&&String(r.metakey||'')==='avatar'); return { name: urec&&String(urec.metavalue||'')||'', avatar: avatar&&String(avatar.metavalue||'')||'' } }
+function listPosts(all){ return all.filter(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='posts'&&String(r.metakey||'')==='content') }
+async function renderFeed(){ await loadConfig(); const adapter=buildAdapterFromConfig({ defaultPrefix: config.defaultPrefix, snapshotUrl: config.snapshotUrl, writeUrl: config.http.url, writeMethod: config.http.method, headers: (config.http&&config.http.headers)||{} }); const db=new DB(adapter); const q=new WriteQueue(db); db.queue=q; const data=await db.load(); const posts=listPosts(data).slice().sort((a,b)=>String(b.updateddate||b.createddate||'').localeCompare(String(a.updateddate||a.createddate||''))); const el=document.getElementById('stories-list'); if(!el) return; const html = posts.length? posts.map(p=>{ const a=authorByRel(data, p.relid||0); const img=(a.avatar&&a.avatar.startsWith('data:image/'))? a.avatar : 'https://i.pravatar.cc/40'; const txt=(typeof p.metavalue==='object')? JSON.stringify(p.metavalue) : String(p.metavalue||''); const bottles=0; const buckets=0; const cases=0; return `<div id="story-heading"><div id="user-details"><img src="${img}"/><p class="username ignore">${a.name||'Anonymous'} <span>${String(p.updateddate||p.createddate||'')}</span></p></div><p class="time"><span class="rate">Rating: <b>🍺🍺</b></span> <span class="more"><img src="./resources/img/more.svg"/></span></p></div><nav class="vertical-nav" id="verticalNav" style="display: none;"><ul><li><a href="#" class="nav-link">Share</a></li><li><a href="#" class="nav-link">Save</a></li><li><a href="#" class="nav-link">Report</a></li></ul></nav><p>${txt}</p><div id="stories-tools"><p class="ignore">Buy me a beer 👉</p><div class="botts"><a href="#" data-act="beer" data-kind="bottle" data-post="${p.id}"><img width="18" src="./resources/img/1bott.svg"/><span> </span></a><a href="#" data-act="beer" data-kind="bucket" data-post="${p.id}"><img width="18" src="./resources/img/2bott.svg"/><span> </span></a><a href="#" data-act="beer" data-kind="case" data-post="${p.id}"><img width="18" src="./resources/img/3bott.svg"/><span> </span></a><a href="#" data-act="beer" data-kind="bucket" data-post="${p.id}"><img width="18" src="./resources/img/bucket.svg"/><span> </span></a><a href="#" data-act="beer" data-kind="case" data-post="${p.id}"><img width="18" src="./resources/img/case.svg"/><span> </span></a></div><small>⚠️ No <b class="ignore">'likes'</b> here, that stuff isn't intoxicating. Buy us some beer.</small></div>` }).join('') : '<div class="muted">No stories yet</div>';
+  el.innerHTML = html;
+  el.addEventListener('click', async (e)=>{ const a=e.target.closest('a'); if(!a) return; if(a.getAttribute('data-act')==='beer'){ const app=authUser(); if(!app){ window.location.href='login.html'; return } const kind=a.getAttribute('data-kind')||'bottle'; const postId=Number(a.getAttribute('data-post')||'0'); const amt= kind==='bottle'?5: (kind==='bucket'?30:60); try{ const r=await fetch('https://coreenginedb.meoasis2014.workers.dev/donate',{ method:'POST', headers:{ 'Content-Type':'application/json', ...(config.http&&config.http.headers)||{} }, body: JSON.stringify({ postId, amount: amt, kind }) }); if(r.ok){ location.reload() } }catch(_){ } } })
+}
+renderFeed()
+</script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
   let uname='';
@@ -274,7 +287,12 @@ translate.execute();
   const loginLinks = Array.from(document.querySelectorAll('#login-btn a'));
   if(loginLinks.length){
     if(uname){
-      loginLinks.forEach(a=>{ a.textContent = 'Welcome To KL, ' + uname; a.setAttribute('href','./index.html') })
+      loginLinks.forEach(a=>{ a.textContent = 'Welcome To KL, ' + uname; a.setAttribute('href','./dashboard.html') })
+      const navUl = document.querySelector('.tabdesk-header ul')
+      if(navUl){
+        if(!document.getElementById('nav-profile')){ const li=document.createElement('li'); li.id='nav-profile'; const a=document.createElement('a'); a.className='ignore'; a.href='./profile.html?u='+encodeURIComponent(uname); a.textContent='🍺 Profile'; li.appendChild(a); navUl.appendChild(li) }
+        if(!document.getElementById('nav-dashboard')){ const li=document.createElement('li'); li.id='nav-dashboard'; const a=document.createElement('a'); a.href='./dashboard.html'; a.textContent='🍺 Dashboard'; li.appendChild(a); navUl.appendChild(li) }
+      }
       let lgc = document.getElementById('logout-btn');
       if(!lgc){ lgc = document.createElement('div'); lgc.id = 'logout-btn'; const parent = document.querySelector('.tabdesk-header #header-content'); if(parent) parent.appendChild(lgc) }
       lgc.innerHTML = '<a href="#" id="logout-link">Logout</a>'
@@ -318,6 +336,29 @@ translate.execute();
       verticalNav.style.display = 'none';
     });
   });
+
+  const sendBtn = document.getElementById('send-btn');
+  if(sendBtn){
+    sendBtn.addEventListener('click', async function(){
+      try{
+        const app = JSON.parse(sessionStorage.getItem('app_auth')||'null');
+        if(!app || !app.username){ window.location.href='login.html'; return }
+        const text = String(document.getElementById('chat-input').value||'').trim();
+        if(!text){ return }
+        const WRITE_DB_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.dbUrl) return String(window.__REMOTE.dbUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u') })();
+        const auth = sessionStorage.getItem('cedb_auth')||'';
+        const head = await fetch(WRITE_DB_URL,{ method:'HEAD' });
+        const et = head.headers.get('etag')||'';
+        const rows = await (await fetch(WRITE_DB_URL)).json().catch(()=>[]);
+        if(!Array.isArray(rows)){ return }
+        const now = new Date().toISOString();
+        const relid = Number(app.relid||0) || 999;
+        rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'posts', metakey:'content', metavalue:text, createddate: now, updateddate: now });
+        const r = await fetch(WRITE_DB_URL, { method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}, auth? { 'Authorization': auth } : {}), body: JSON.stringify(rows,null,2), mode:'cors', credentials:'omit' });
+        if(r.ok){ document.getElementById('chat-input').value=''; location.reload() }
+      }catch(_){ }
+    })
+  }
 
 // Get the button and menu elements
 const menuToggleBtn = document.getElementById('menu-toggle-btn');

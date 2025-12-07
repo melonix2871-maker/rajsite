@@ -27,6 +27,7 @@ export default {
 
     const isCfg = url.pathname === '/json/config.json'
     const isDb = url.pathname === '/json/db.json'
+    const isPublicDb = url.pathname === '/json/public.db.json'
     const isTopup = url.pathname === '/wallet/topup'
     const isDonate = url.pathname === '/donate'
     const isForgot = url.pathname === '/auth/forgot'
@@ -75,7 +76,38 @@ export default {
       }
     }
 
-    if (!isCfg && !isDb && !isTopup && !isDonate && !isForgot && !isWebhook && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
+    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
+
+    if (isWebhook && req.method === 'POST') {
+      const body = await req.text()
+      const ok = await verifyStripeWebhook(body)
+      if(!ok){ h.set('Content-Type','application/json'); await logEvent('POST','/stripe/webhook',400,(body&&body.length)||0,'','invalid_signature'); return new Response('{"error":"invalid_signature"}',{ status:400, headers:h }) }
+      let evt
+      try{ evt = JSON.parse(body||'{}') }catch(_){ evt=null }
+      const obj = evt && evt.data && evt.data.object || {}
+      const username = (obj && obj.metadata && obj.metadata.username) || ''
+      let amount = 0
+      if(obj && typeof obj.amount_total === 'number') amount = Number(obj.amount_total||0)/100
+      else if(obj && typeof obj.amount === 'number') amount = Number(obj.amount||0)/100
+      if(!username || !(amount>0)){ h.set('Content-Type','application/json'); await logEvent('POST','/stripe/webhook',422,(body&&body.length)||0,'','missing_fields'); return new Response('{"error":"missing_fields"}',{ status:422, headers:h }) }
+      let rows
+      try{ rows = JSON.parse(await getText('db.json')||'[]') }catch(_){ rows=[] }
+      const urec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&String(r.metakey||'')==='username'&&String(r.metavalue||'')===String(username))
+      if(!urec){ h.set('Content-Type','application/json'); await logEvent('POST','/stripe/webhook',404,0,'','user_not_found'); return new Response('{"error":"user_not_found"}',{ status:404, headers:h }) }
+      const rel = Number(urec.relid||0)
+      const now = new Date().toISOString()
+      const balRec = rows.find(r=>String(r.prefix||'')==='wallet_'&&String(r.collection||'')==='balance'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='amount')
+      if(balRec){ balRec.metavalue = Number(balRec.metavalue||0) + amount; balRec.updateddate = now }
+      else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'wallet_', collection:'balance', metakey:'amount', metavalue: amount, createddate: now, updateddate: now }) }
+      rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'wallet_', collection:'ledger', metakey:'topup', metavalue: amount, createddate: now, updateddate: now })
+      const pretty = JSON.stringify(rows,null,2)
+      await putText('db.json', pretty)
+      const newEt = await sha256Hex(pretty)
+      h.set('ETag', newEt)
+      h.set('Content-Type','application/json')
+      await logEvent('POST','/stripe/webhook',200,(body&&body.length)||0,String(username),'webhook_ok')
+      return new Response('{"ok":true}',{ status:200, headers:h })
+    }
 
     async function getText(k) {
       const obj = await env.COREENGINEDB.get(k)
@@ -89,6 +121,9 @@ export default {
       const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
       return Array.from(new Uint8Array(d)).map(b => b.toString(16).padStart(2, '0')).join('')
     }
+    async function hmacHex(key, data){ const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name:'HMAC', hash:'SHA-256' }, false, ['sign']); const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(data)); return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('') }
+    function parseStripeSig(){ const raw=req.headers.get('Stripe-Signature')||''; const parts=raw.split(',').map(s=>s.trim()); let t=''; let v1=''; for(const p of parts){ const kv=p.split('='); if(kv[0]==='t') t=kv[1]||''; if(kv[0]==='v1') v1=kv[1]||'' } return { t, v1 } }
+    async function verifyStripeWebhook(body){ const s=parseStripeSig(); if(!s.t||!s.v1) return false; const secret=env.STRIPE_WEBHOOK_SECRET||''; if(!secret) return false; const calc=await hmacHex(secret, s.t + '.' + (body||'')); return timingSafeEqual(calc, s.v1) }
     async function putText(k, t) {
       await env.COREENGINEDB.put(k, t, { httpMetadata: { contentType: 'application/json' } })
     }
@@ -200,11 +235,36 @@ export default {
         await logEvent('GET', url.pathname, 200, (outText && outText.length) || 0, String((auth && auth.ok && auth.user) || ''), '')
         return new Response(outText, { status: 200, headers: h })
       }
-      // Default GET for db.json (public read)
+      // Public db snapshot
+      if (isPublicDb) {
+        let rows = []
+        try { rows = JSON.parse(bodyText || '[]') } catch (_e) { rows = [] }
+        const safe = Array.isArray(rows) ? rows.filter(r => {
+          const p = String(r.prefix||'')
+          const c = String(r.collection||'')
+          const k = String(r.metakey||'')
+          if (p === 'app_' && (c === 'posts' || (c === 'users' && (k === 'username' || k === 'avatar')))) return true
+          if (p === 'donate_' && c === 'post') return true
+          return false
+        }) : []
+        const outText = JSON.stringify(safe)
+        const et = await sha256Hex(outText)
+        h.set('Content-Type', 'application/json')
+        h.set('ETag', et)
+        await logEvent('GET', url.pathname, 200, (outText && outText.length) || 0, '', 'public_snapshot')
+        return new Response(outText, { status: 200, headers: h })
+      }
+      // Default GET for db.json (private)
+      const authDb = await checkAuth()
+      if (!authDb.ok) {
+        h.set('Content-Type', 'application/json')
+        await logEvent('GET', url.pathname, 401, 0, '', 'unauthorized_read')
+        return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: h })
+      }
       const et = await sha256Hex(bodyText)
       h.set('Content-Type', 'application/json')
       h.set('ETag', et)
-      await logEvent('GET', url.pathname, 200, (bodyText && bodyText.length) || 0, '', '')
+      await logEvent('GET', url.pathname, 200, (bodyText && bodyText.length) || 0, String(authDb.user||''), '')
       return new Response(bodyText, { status: 200, headers: h })
     }
     if (req.method === 'HEAD') {
@@ -232,9 +292,31 @@ export default {
         await logEvent('HEAD', url.pathname, 200, 0, String((auth && auth.ok && auth.user) || ''), '')
         return new Response(null, { status: 200, headers: h })
       }
+      if (isPublicDb) {
+        let rows = []
+        try { rows = JSON.parse(t || '[]') } catch (_e) { rows = [] }
+        const safe = Array.isArray(rows) ? rows.filter(r => {
+          const p = String(r.prefix||'')
+          const c = String(r.collection||'')
+          const k = String(r.metakey||'')
+          if (p === 'app_' && (c === 'posts' || (c === 'users' && (k === 'username' || k === 'avatar')))) return true
+          if (p === 'donate_' && c === 'post') return true
+          return false
+        }) : []
+        const outText = JSON.stringify(safe)
+        const et = await sha256Hex(outText)
+        h.set('ETag', et)
+        await logEvent('HEAD', url.pathname, 200, 0, '', 'public_snapshot')
+        return new Response(null, { status: 200, headers: h })
+      }
+      const authDbHead = await checkAuth()
+      if (!authDbHead.ok) {
+        await logEvent('HEAD', url.pathname, 401, 0, '', 'unauthorized_read')
+        return new Response(null, { status: 401, headers: h })
+      }
       const et = await sha256Hex(t)
       h.set('ETag', et)
-      await logEvent('HEAD', url.pathname, 200, 0, '', '')
+      await logEvent('HEAD', url.pathname, 200, 0, String(authDbHead.user||''), '')
       return new Response(null, { status: 200, headers: h })
     }
     if (req.method !== 'PUT' && req.method !== 'POST' && req.method !== 'PATCH') return new Response('', { status: 405, headers: h })
@@ -269,7 +351,9 @@ export default {
       return new Response('{"error":"precondition_failed"}', { status: 412, headers: h })
     }
     const body = await req.text()
-    if(isTopup){ try{ const payload = JSON.parse(body||'{}'); const amt = Number(payload.amount||0); const username = String(payload.username||''); if(!amt || !username){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',400,0,String(auth.user||''),'bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } const urlOut = env.STRIPE_SECRET? 'https://checkout.stripe.com/pay' : '' ; h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',200,0,String(auth.user||''),'topup_init'); return new Response(JSON.stringify({ ok:true, url: urlOut }),{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',500,0,String(auth.user||''),'topup_error'); return new Response('{"error":"topup_error"}',{ status:500, headers:h }) } }
+    if(isTopup){ try{ const payload = JSON.parse(body||'{}'); const amt = Number(payload.amount||0); const username = String(payload.username||''); const kind = String(payload.kind||''); if(!env.STRIPE_SECRET){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',501,0,String(auth.user||''),'stripe_not_configured'); return new Response('{"error":"stripe_not_configured"}',{ status:501, headers:h }) } if(!amt || !username){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',400,0,String(auth.user||''),'bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } const origin = req.headers.get('Origin') || 'https://kwentonglasing.servebeer.com'; const success = origin + '/dashboard.html?payment=success'; const cancel = origin + '/dashboard.html?payment=cancel'; const cfgText = await getText('config.json'); let cfg={}; try{ cfg=JSON.parse(cfgText||'{}') }catch(_){ cfg={} } const stripeCfg = cfg && cfg.stripe || {}; const prices = stripeCfg.prices || {}; const priceId = kind==='bottle'? (prices.bottle||'') : (kind==='bucket'? (prices.bucket||'') : (kind==='case'? (prices.case||'') : '')); const form = new URLSearchParams(); form.set('mode','payment'); form.append('payment_method_types[]','card'); form.set('success_url', success); form.set('cancel_url', cancel); if(priceId){ form.append('line_items[0][price]', priceId); form.append('line_items[0][quantity]','1'); } else { const cents = Math.round(amt*100); form.append('line_items[0][price_data][currency]','usd'); form.append('line_items[0][price_data][product_data][name]', kind? ('Top-up '+kind) : 'Wallet Top-up'); form.append('line_items[0][price_data][unit_amount]', String(cents)); form.append('line_items[0][quantity]','1'); }
+      form.append('metadata[username]', username); form.append('metadata[amount]', String(amt)); if(kind) form.append('metadata[kind]', kind);
+      const sr = await fetch('https://api.stripe.com/v1/checkout/sessions',{ method:'POST', headers:{ 'Authorization':'Bearer '+env.STRIPE_SECRET, 'Content-Type':'application/x-www-form-urlencoded' }, body: form.toString() }); if(!sr.ok){ const t = await sr.text(); h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',502, (t&&t.length)||0, String(auth.user||''),'stripe_error'); return new Response('{"error":"stripe_error"}',{ status:502, headers:h }) } const js = await sr.json(); const urlOut = js && js.url ? js.url : ''; h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',200,0,String(auth.user||''),'topup_init'); return new Response(JSON.stringify({ ok:true, url: urlOut }),{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',500,0,String(auth.user||''),'topup_error'); return new Response('{"error":"topup_error"}',{ status:500, headers:h }) } }
     if(isDonate){ try{ const payload = JSON.parse(body||'{}'); const postId = Number(payload.postId||0); const amt = Number(payload.amount||0); const kind = String(payload.kind||''); if(!postId || !amt){ h.set('Content-Type','application/json'); await logEvent('POST','/donate',400,0,String(auth.user||''),'bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } let rows; try{ rows = JSON.parse(current||'[]') }catch(_){ rows=[] } const userRel = 0; // donation debit path would check wallet balance (omitted in stub)
       const now = new Date().toISOString(); rows.push({ id: crypto.randomUUID(), relid: postId, prefix:'donate_', collection:'post', metakey: (kind==='bottle'?'bottles': (kind==='bucket'?'buckets':'cases')), metavalue: 1, createddate: now, updateddate: now }); const pretty = JSON.stringify(rows,null,2); await putText('db.json', pretty); const newEt = await sha256Hex(pretty); h.set('ETag', newEt); h.set('Content-Type','application/json'); await logEvent('POST','/donate',200,amt,String(auth.user||''),'donate'); return new Response('{"ok":true}',{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/donate',500,0,String(auth.user||''),'donate_error'); return new Response('{"error":"donate_error"}',{ status:500, headers:h }) } }
     if(isForgot){ try{ const payload = JSON.parse(body||'{}'); const username = String(payload.username||''); const code = String(payload.code||''); const newPassword = String(payload.newPassword||''); if(!username||!code||!newPassword){ h.set('Content-Type','application/json'); await logEvent('POST','/auth/forgot',400,0,'','bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } let rows; try{ rows=JSON.parse(current||'[]') }catch(_){ rows=[] } const urec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&String(r.metakey||'')==='username'&&String(r.metavalue||'')===username); if(!urec){ h.set('Content-Type','application/json'); return new Response('{"error":"not_found"}',{ status:404, headers:h }) } const rel=Number(urec.relid||0); const recRec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='recovery'); let ok=false; try{ const cfgText = await getText('config.json'); let cfg={}; try{ cfg=JSON.parse(cfgText||'{}') }catch(_){ cfg={} } const salt = (function(){ try{ const r=JSON.parse(recRec.metavalue||'{}'); return String(r.salt||'coreenginedb') }catch(_){ return 'coreenginedb' } })(); const iterations = (function(){ try{ const r=JSON.parse(recRec.metavalue||'{}'); return Number(r.iterations||100000) }catch(_){ return 100000 } })(); const recHashStored = (function(){ try{ const r=JSON.parse(recRec.metavalue||'{}'); return String(r.hash||'') }catch(_){ return '' } })(); const calc = await pbkdf2Hex(code, salt, iterations, 32); ok = timingSafeEqual(calc, recHashStored) }catch(_){ ok=false } if(!ok){ h.set('Content-Type','application/json'); return new Response('{"error":"invalid_code"}',{ status:403, headers:h }) } const salt='coreenginedb'; const iterations=100000; const newHash = await pbkdf2Hex(newPassword, salt, iterations, 32); const now=new Date().toISOString(); const passRec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='password'); if(passRec){ passRec.metavalue = JSON.stringify({ hash: newHash, salt, iterations }); passRec.updateddate=now } const pretty = JSON.stringify(rows,null,2); await putText('db.json', pretty); const newEt = await sha256Hex(pretty); h.set('ETag', newEt); h.set('Content-Type','application/json'); await logEvent('POST','/auth/forgot',200,0,username,'reset'); return new Response('{"ok":true}',{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/auth/forgot',500,0,'','reset_error'); return new Response('{"error":"reset_error"}',{ status:500, headers:h }) } }
