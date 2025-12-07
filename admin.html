@@ -92,5 +92,48 @@ async function saveStripe(){ try{ const head=await fetch(WORKER_CONFIG_URL,{ met
 loadStripe()
 document.getElementById('stripe-save').addEventListener('click', function(e){ e.preventDefault(); saveStripe() })
 </script>
+<script>
+async function renderMonitoring(){ try{ const auth=requireSession(); if(!auth) return; const r=await fetch(WRITE_DB_URL,{ cache:'no-store', headers:{ 'Authorization':auth } }); const rows = r.ok? await r.json() : []; const byUser = {}; const byPost = []; const donations = {}; const wallets = {}; (Array.isArray(rows)?rows:[]).forEach(rec=>{
+  const p=String(rec.prefix||''), c=String(rec.collection||''), k=String(rec.metakey||'');
+  if(p==='app_' && c==='users' && k==='username'){ byUser[rec.relid||0] = { username: String(rec.metavalue||'') } }
+  if(p==='app_' && c==='users' && k==='avatar'){ const u=byUser[rec.relid||0]||{}; u.avatar=String(rec.metavalue||''); byUser[rec.relid||0]=u }
+  if(p==='app_' && c==='posts' && k==='content'){ byPost.push(rec) }
+  if(p==='donate_' && c==='post'){ const pid=rec.relid||0; const dk=String(rec.metakey||''); const v=Number(rec.metavalue||0)||0; donations[pid] = donations[pid]||{ bottles:0,buckets:0,cases:0 }; if(dk==='bottles') donations[pid].bottles+=v; if(dk==='buckets') donations[pid].buckets+=v; if(dk==='cases') donations[pid].cases+=v }
+  if(p==='wallet_' && c==='balance' && k==='amount'){ wallets[rec.relid||0] = Number(rec.metavalue||0)||0 }
+  if(p==='wallet_' && c==='ledger'){ const rel=rec.relid||0; wallets[rel] = wallets[rel]||0 }
+});
+  const mount = document.createElement('div'); mount.style.marginTop='20px';
+  const totalUsers = Object.keys(byUser).length; const totalPosts = byPost.length; const totalDonations = Object.values(donations).reduce((m,d)=>m + d.bottles*5 + d.buckets*30 + d.cases*60,0);
+  mount.innerHTML = `<h2>Monitoring</h2><div class="grid"><div><div class="muted">Users</div><div class="badge">${totalUsers}</div></div><div><div class="muted">Posts</div><div class="badge">${totalPosts}</div></div><div><div class="muted">Donations (USD)</div><div class="badge">$${totalDonations.toFixed(2)}</div></div></div><div style="margin-top:12px"><h3>Users</h3><table><thead><tr><th>relid</th><th>username</th><th>balance</th></tr></thead><tbody>${Object.entries(byUser).map(([rel,u])=>`<tr><td>${rel}</td><td>${u.username||''}</td><td>$${(wallets[rel]||0).toFixed(2)}</td></tr>`).join('')}</tbody></table></div><div style="margin-top:12px"><h3>Posts</h3><table><thead><tr><th>id</th><th>relid</th><th>content</th><th>raised</th></tr></thead><tbody>${byPost.map(p=>{ const d=donations[p.id||0]||{bottles:0,buckets:0,cases:0}; const total=d.bottles*5 + d.buckets*30 + d.cases*60; const txt=(typeof p.metavalue==='object')? JSON.stringify(p.metavalue) : String(p.metavalue||''); return `<tr><td>${p.id}</td><td>${p.relid}</td><td>${txt}</td><td>$${total.toFixed(2)}</td></tr>` }).join('')}</tbody></table></div>`;
+  document.body.appendChild(mount);
+}catch(_){ }
+}
+renderMonitoring()
+</script>
+<script>
+function el(tag, attrs={}, children=[]) { const e=document.createElement(tag); Object.entries(attrs||{}).forEach(([k,v])=>{ if(k==='class') e.className=v; else e.setAttribute(k,v) }); children.forEach(c=>{ if(typeof c==='string') e.appendChild(document.createTextNode(c)); else e.appendChild(c) }); return e }
+async function fetchAll(){ const auth=requireSession(); if(!auth) return { rows:[], cfg:{}, acts:[] }; const [rowsRes,cfgRes,dayRes] = await Promise.all([
+  fetch(WRITE_DB_URL,{ cache:'no-store', headers:{ 'Authorization':auth } }),
+  fetch(WORKER_CONFIG_URL,{ cache:'no-store', headers:{ 'Authorization':auth } }),
+  fetch('https://coreenginedb.meoasis2014.workers.dev/activity?day='+new Date().toISOString().slice(0,10)+'&limit=500')
+]); const rows = rowsRes.ok? await rowsRes.json():[]; const cfg = cfgRes.ok? await cfgRes.json():{}; const acts = dayRes.ok? await dayRes.json():[]; return { rows:Array.isArray(rows)?rows:[], cfg: (cfg||{}), acts: Array.isArray(acts)?acts:[] }
+}
+function compute(rows){ const users={}, posts=[], donations={}, wallets={}, withdrawals=[]; rows.forEach(rec=>{ const p=String(rec.prefix||''), c=String(rec.collection||''), k=String(rec.metakey||''); if(p==='app_'&&c==='users'&&k==='username'){ users[rec.relid||0]=Object.assign(users[rec.relid||0]||{}, { username:String(rec.metavalue||'') }) } if(p==='app_'&&c==='users'&&k==='avatar'){ users[rec.relid||0]=Object.assign(users[rec.relid||0]||{}, { avatar:String(rec.metavalue||'') }) } if(p==='app_'&&c==='posts'&&k==='content'){ posts.push(rec) } if(p==='donate_'&&c==='post'){ const pid=rec.relid||0; const dk=String(k); const v=Number(rec.metavalue||0)||0; donations[pid]=donations[pid]||{ bottles:0,buckets:0,cases:0 }; if(dk==='bottles') donations[pid].bottles+=v; if(dk==='buckets') donations[pid].buckets+=v; if(dk==='cases') donations[pid].cases+=v } if(p==='wallet_'&&c==='balance'&&k==='amount'){ wallets[rec.relid||0]=Number(rec.metavalue||0)||0 } if(p==='withdraw_'&&c==='requests'){ withdrawals.push(rec) } }); return { users, posts, donations, wallets, withdrawals }
+}
+function renderTabs(root){ const tabs=['Users','Posts','Donations','Wallets','Withdrawals','Activity','Stripe']; const bar=el('div',{ class:'toolbar', id:'mon-tabs', style:'border-bottom:1px solid #eee;margin-top:20px' }, tabs.map(t=>el('button',{ class:'secondary', 'data-tab':t },[t]))); const panel=el('div',{ id:'mon-panel' },[]); root.appendChild(bar); root.appendChild(panel); bar.addEventListener('click',(e)=>{ const b=e.target.closest('button'); if(!b) return; const tab=b.getAttribute('data-tab'); root.dispatchEvent(new CustomEvent('switch',{ detail:{ tab } })) }); return { bar, panel } }
+function table(headers, rows){ const t=el('table',{},[]); const thead=el('thead',{},[ el('tr',{}, headers.map(h=>el('th',{},[h])) ) ]); const tbody=el('tbody',{}, rows.map(r=> el('tr',{}, r.map(c=> el('td',{},[ String(c) ]) )) )); t.appendChild(thead); t.appendChild(tbody); return t }
+async function renderAll(){ const mount=document.createElement('div'); document.body.appendChild(mount); const { rows, cfg, acts } = await fetchAll(); const { users, posts, donations, wallets, withdrawals } = compute(rows); const { bar, panel } = renderTabs(mount);
+  function show(tab){ panel.innerHTML=''; if(tab==='Users'){ const hdr=['relid','username','balance']; const data=Object.entries(users).map(([rel,u])=>[rel, u.username||'', '$'+(wallets[rel]||0).toFixed(2)]); panel.appendChild(table(hdr,data)) }
+  else if(tab==='Posts'){ const hdr=['id','relid','content','raised']; const data=posts.map(p=>{ const d=donations[p.id||0]||{ bottles:0,buckets:0,cases:0 }; const total=d.bottles*5 + d.buckets*30 + d.cases*60; const txt=(typeof p.metavalue==='object')? JSON.stringify(p.metavalue) : String(p.metavalue||''); return [p.id, p.relid, txt, '$'+total.toFixed(2)] }); panel.appendChild(table(hdr,data)) }
+  else if(tab==='Donations'){ const hdr=['postId','bottles','buckets','cases','total']; const data=Object.entries(donations).map(([pid,d])=>[pid, d.bottles, d.buckets, d.cases, '$'+(d.bottles*5 + d.buckets*30 + d.cases*60).toFixed(2)]); panel.appendChild(table(hdr,data)) }
+  else if(tab==='Wallets'){ const hdr=['relid','balance']; const data=Object.entries(wallets).map(([rel,bal])=>[rel, '$'+Number(bal||0).toFixed(2)]); panel.appendChild(table(hdr,data)) }
+  else if(tab==='Withdrawals'){ const hdr=['id','relid','amount','status','created']; const data=withdrawals.map(w=>[w.id, w.relid, String(w.metavalue&&w.metavalue.amount||''), String(w.metavalue&&w.metavalue.status||''), w.createddate||'']); panel.appendChild(table(hdr,data)) }
+  else if(tab==='Activity'){ const hdr=['ts','method','path','status','user','reason']; const data=(acts||[]).map(a=>[a.ts||'', a.method||'', a.path||'', a.status||'', a.user||'', a.reason||'']); panel.appendChild(table(hdr,data)) }
+  else if(tab==='Stripe'){ const pk = (cfg && cfg.stripe && cfg.stripe.publishableKey) || ''; const pr = (cfg && cfg.stripe && cfg.stripe.prices) || {}; const card=el('div',{},[ el('div',{ class:'muted' },['Publishable Key']), el('div',{ class:'badge' },[pk||'(not set)']), el('div',{ class:'muted', style:'margin-top:12px' },['Prices']), el('div',{},[ 'Bottle: ', pr.bottle||'', ' • Bucket: ', pr.bucket||'', ' • Case: ', pr.case||'' ]) ]); panel.appendChild(card) }
+  }
+  mount.addEventListener('switch', (e)=> show(e.detail.tab)); show('Users')
+}
+renderAll()
+</script>
 </body>
 </html>
