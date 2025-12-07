@@ -33,7 +33,7 @@ export default {
     const isForgot = url.pathname === '/auth/forgot'
     const isWebhook = url.pathname === '/stripe/webhook'
     const isActivity = url.pathname === '/activity'
-    const key = isCfg ? 'config.json' : (isDb ? 'db.json' : '')
+    const key = isCfg ? 'config.json' : ((isDb || isPublicDb) ? 'db.json' : '')
 
     async function logEvent(method, path, status, size, user, reason) {
       try {
