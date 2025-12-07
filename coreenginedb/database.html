@@ -458,6 +458,7 @@
         return true
       }
     }
+    function buildAdapterFromConfig(cfg){ const c = cfg || window.__CEDB || {}; const headers = (c.headers)||{}; return new HttpAdapter({ url: c.writeUrl||c.url||'https://coreenginedb.meoasis2014.workers.dev/json/db.json', method: c.writeMethod||'PUT', headers }) }
 
     let adapter
     let db
