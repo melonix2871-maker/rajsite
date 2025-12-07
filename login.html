@@ -138,13 +138,24 @@
    <div id="story-title-bar">
     <h1 class="ignore">Register</h1>
   </div>
-   <div id="register-status" style="margin-top:8px"></div>
+  <div id="register-status" style="margin-top:8px"></div>
   <form id="register-form">
     <input type="hidden" id="csrf-register-token" name="csrf_token">
     <label>Username <input id="reg-username" autocomplete="username"></label>
     <label>Password <input id="reg-password" type="password" autocomplete="new-password"></label>
     <label>Confirm <input id="reg-confirm" type="password" autocomplete="new-password"></label>
     <button type="submit" class="ignore">Create Account</button>
+  </form>
+  <div id="story-title-bar">
+    <h1 class="ignore">Forgot Password</h1>
+  </div>
+  <div id="forgot-status" style="margin-top:8px"></div>
+  <form id="forgot-form">
+    <input type="hidden" id="csrf-forgot-token" name="csrf_token">
+    <label>Username <input id="fp-username" autocomplete="username"></label>
+    <label>Recovery Code <input id="fp-code" autocomplete="one-time-code"></label>
+    <label>New Password <input id="fp-password" type="password" autocomplete="new-password"></label>
+    <button type="submit" class="ignore">Reset Password</button>
   </form>
  
 </div>
@@ -236,10 +247,10 @@
 
 
 <script>
-const WRITE_CONFIG_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/config.json'
-const WRITE_DB_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
+const WRITE_CONFIG_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
+const WRITE_DB_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.dbUrl) return String(window.__REMOTE.dbUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u') })()
 function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_URL } }
-try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='admin.html' } else if(app){ window.location.href='index.html' } }catch(_){}
+try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='admin.html' } else if(app){ window.location.href='index.html' } }catch(_){ }
 </script>
 <script>
 async function tryLogin(username, password){
@@ -318,11 +329,14 @@ document.getElementById('register-form').addEventListener('submit', async (e)=>{
     const salt = randHex(12)
     const iterations = 100000
     const hash = await pbkdf2Hex(p, salt, iterations, 32)
+    const rec = (function(){ const a=new Uint8Array(10); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') })()
+    const recHash = await pbkdf2Hex(rec, salt, iterations, 32)
     rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'username', metavalue:u, createddate: now, updateddate: now })
     rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'password', metavalue: JSON.stringify({ hash, salt, iterations }), createddate: now, updateddate: now })
+    rows.push({ id: crypto.randomUUID(), relid, prefix:'app_', collection:'users', metakey:'recovery', metavalue: JSON.stringify({ hash: recHash, salt, iterations }), createddate: now, updateddate: now })
     const r = await fetch(WRITE_DB_URL, { method:'PUT', headers: Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}), body: JSON.stringify(rows, null, 2) })
     if(!r.ok){ document.getElementById('register-status').textContent='❌ Registration failed'; return }
-    document.getElementById('register-status').textContent='✅ Registered. Sign in now.'
+    document.getElementById('register-status').textContent='✅ Registered. Save your recovery code: '+rec
   }catch(_e){ document.getElementById('register-status').textContent='❌ Registration error' }
 })
 </script>
@@ -333,6 +347,7 @@ document.getElementById('register-form').addEventListener('submit', async (e)=>{
   if(!t){ try{ t = gen(32); sessionStorage.setItem('csrf_token', t); document.cookie='csrf_token='+t+'; SameSite=Strict; Secure; path=/'; }catch(_){ t='' } }
   const a=document.getElementById('csrf-login-token'); if(a) a.value = t;
   const b=document.getElementById('csrf-register-token'); if(b) b.value = t;
+  const c=document.getElementById('csrf-forgot-token'); if(c) c.value = t;
 })();
 </script>
 
@@ -346,7 +361,7 @@ translate.listener.start();
 translate.execute();
 </script>
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
   //const moreButton = document.querySelector('.more');
   //const verticalNav = document.getElementById('verticalNav');
   
@@ -389,6 +404,20 @@ document.addEventListener('click', function(event) {
 });
 
 });
+</script>
+<script>
+document.getElementById('forgot-form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const u=document.getElementById('fp-username').value.trim();
+  const code=document.getElementById('fp-code').value.trim();
+  const np=document.getElementById('fp-password').value.trim();
+  if(!u||!code||!np){ document.getElementById('forgot-status').textContent='Enter all fields'; return }
+  try{
+    const r = await fetch('https://coreenginedb.meoasis2014.workers.dev/auth/forgot',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username:u, code, newPassword: np }) })
+    const j = r.ok? await r.json() : null
+    if(j && j.ok){ document.getElementById('forgot-status').textContent='✅ Password reset. Sign in.' } else { document.getElementById('forgot-status').textContent='❌ Reset failed' }
+  }catch(_){ document.getElementById('forgot-status').textContent='❌ Reset error' }
+})
 </script>
 </body>
 </html>

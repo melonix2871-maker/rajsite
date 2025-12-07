@@ -25,7 +25,7 @@
 <div id="status" style="margin-top:12px"></div>
 <div style="margin-top:8px;color:#333">CoreEngineDB-backed admin. Changes are persisted to the remote JSON.</div>
 <script>
-const WRITE_DB_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
+const WRITE_DB_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.dbUrl) return String(window.__REMOTE.dbUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u') })()
 function getCoreUrls(){ return { dbUrl: WRITE_DB_URL } }
 function requireSession(){
   const app = (function(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } })()
