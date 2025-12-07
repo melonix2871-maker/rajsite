@@ -53,23 +53,44 @@
 
 <script type="module">
 import { DB, WriteQueue, buildAdapterFromConfig } from './coreenginedb/client.js'
-
 function q(name){ return new URLSearchParams(location.search).get(name)||'' }
 let config={}
-async function loadConfig(){ try{ const r=await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok) config=await r.json() }catch(_){} if(!config.defaultPrefix) config.defaultPrefix='app_'; config.snapshotUrl='https://coreenginedb.meoasis2014.workers.dev/json/public.db.json'; if(!config.http) config.http={}; config.http.url='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method='PUT'; try{ const a=sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization=a } }catch(_){} }
-async function fetchSnapshot(){ try{ const r=await fetch(config.snapshotUrl,{ cache:'no-store' }); if(r.ok){ const j=await r.json().catch(()=>null); if(Array.isArray(j)) return j } }catch(_){} try{ const auth = (config.http&&config.http.headers&&config.http.headers.Authorization)||''; if(auth){ const r=await fetch(config.http.url,{ cache:'no-store', headers:{ Authorization: auth } }); if(r.ok){ const j=await r.json().catch(()=>null); if(Array.isArray(j)) return j } } }catch(_){} return [] }
-function setLoginUI(){ try{ const a=JSON.parse(sessionStorage.getItem('app_auth')||'null'); const loginLinks = Array.from(document.querySelectorAll('#login-btn a')); if(loginLinks.length){ if(a&&a.username){ loginLinks.forEach(x=>{ x.textContent='Welcome To KL, '+a.username; x.href='dashboard.html' }) } } }catch(_){ }
-
+async function loadConfig(){ try{ const r=await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok) config=await r.json() }catch(_){} if(!config.defaultPrefix) config.defaultPrefix='app_'; config.snapshotUrl='https://coreenginedb.meoasis2014.workers.dev/json/public.db.json'; if(!config.http) config.http={}; config.http.url='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method='PUT'; try{ const a=sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization=a } }catch(_){ } }
+async function fetchSnapshot(){ try{ const r=await fetch(config.snapshotUrl,{ cache:'no-store' }); if(r.ok){ const j=await r.json().catch(()=>null); if(Array.isArray(j)) return j } }catch(_){ } try{ const auth = (config.http&&config.http.headers&&config.http.headers.Authorization)||''; if(auth){ const r=await fetch(config.http.url,{ cache:'no-store', headers:{ Authorization: auth } }); if(r.ok){ const j=await r.json().catch(()=>null); if(Array.isArray(j)) return j } } }catch(_){ } return [] }
+function setLoginUI(){ try{ const a=JSON.parse(sessionStorage.getItem('app_auth')||'null'); const loginDiv=document.getElementById('login-btn'); if(a&&a.username){ if(loginDiv) loginDiv.style.display='none'; const navUl=document.querySelector('.tabdesk-header ul'); if(navUl && !document.getElementById('nav-profile')){ const li=document.createElement('li'); li.id='nav-profile'; const l=document.createElement('a'); l.className='ignore'; l.href='./profile.html?u='+encodeURIComponent(a.username); l.textContent='🍺 Profile'; li.appendChild(l); navUl.appendChild(li) } if(navUl && !document.getElementById('nav-dashboard')){ const li=document.createElement('li'); li.id='nav-dashboard'; const l=document.createElement('a'); l.href='./dashboard.html'; l.textContent='🍺 Dashboard'; li.appendChild(l); navUl.appendChild(li) } } }catch(_){ }
 function pickUser(all, username){ const urec = all.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&String(r.metakey||'')==='username'&&String(r.metavalue||'')===String(username)); if(!urec) return null; const rel=Number(urec.relid||0); const avatar = all.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='avatar'); return { rel, avatar: avatar&&avatar.metavalue||'' } }
 function listUserPosts(all, rel){ return all.filter(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='posts'&&Number(r.relid||0)===Number(rel||0)) }
 function postDonations(all, postId){ const d = all.filter(r=>String(r.prefix||'')==='donate_'&&String(r.collection||'')==='post'&&Number(r.relid||0)===Number(postId||0)); const totals = d.reduce((m,r)=>{ const k=String(r.metakey||''); const v=Number(r.metavalue||0)||0; m[k]=(m[k]||0)+v; return m },{}); return totals }
-
-async function main(){ setLoginUI(); const username=q('u')|| (function(){ try{ const a=JSON.parse(sessionStorage.getItem('app_auth')||'null'); return a&&a.username||'' }catch(_){ return '' } })(); await loadConfig(); const adapter=buildAdapterFromConfig({ defaultPrefix: config.defaultPrefix, snapshotUrl: config.snapshotUrl, writeUrl: config.http.url, writeMethod: config.http.method, headers: (config.http&&config.http.headers)||{} }); const db=new DB(adapter); const queue=new WriteQueue(db); db.queue=queue; const data=await fetchSnapshot(); document.getElementById('uname').textContent = username||'Unknown'; const user=pickUser(data,username); const pfp=document.getElementById('pfp'); if(user && user.avatar && String(user.avatar).startsWith('data:image/')) pfp.src=user.avatar; const posts=listUserPosts(data, user?user.rel:0); const html = posts.length? posts.map(p=>{ const d=postDonations(data,p.id||0); const bottles=Number(d.bottles||0)||0; const buckets=Number(d.buckets||0)||0; const cases=Number(d.cases||0)||0; const total=bottles*5 + buckets*30 + cases*60; return `<div style="margin-bottom:12px;padding:12px;border:1px solid #111;border-radius:8px;background:#fff;color:#222"><div>${(typeof p.metavalue==='object'? JSON.stringify(p.metavalue): String(p.metavalue||''))}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="ignore" data-act="beer" data-kind="bottle" data-post="${p.id}">🍺 $5</button><button class="ignore" data-act="beer" data-kind="bucket" data-post="${p.id}">🪣 $30</button><button class="ignore" data-act="beer" data-kind="case" data-post="${p.id}">📦 $60</button></div><div class="ignore" style="opacity:.7;margin-top:6px">Raised: $${total.toFixed(2)} (🍺 ${bottles}, 🪣 ${buckets}, 📦 ${cases})</div></div>` }).join('') : '<div class="muted">No posts</div>'
+async function main(){
+  setLoginUI()
+  const username = q('u') || (function(){ try{ const a=JSON.parse(sessionStorage.getItem('app_auth')||'null'); return a&&a.username||'' }catch(_){ return '' } })()
+  await loadConfig()
+  const adapter = buildAdapterFromConfig({ defaultPrefix: config.defaultPrefix, snapshotUrl: config.snapshotUrl, writeUrl: config.http.url, writeMethod: config.http.method, headers: (config.http&&config.http.headers)||{} })
+  const db = new DB(adapter)
+  const queue = new WriteQueue(db); db.queue = queue
+  const data = await fetchSnapshot()
+  document.getElementById('uname').textContent = username||'Unknown'
+  const user = pickUser(data, username)
+  const pfp = document.getElementById('pfp')
+  if(user && user.avatar && String(user.avatar).startsWith('data:image/')) pfp.src = user.avatar
+  const posts = listUserPosts(data, user?user.rel:0)
+  const html = posts.length? posts.map(p=>{ const d=postDonations(data,p.id||0); const bottles=Number(d.bottles||0)||0; const buckets=Number(d.buckets||0)||0; const cases=Number(d.cases||0)||0; const total=bottles*5 + buckets*30 + cases*60; return `<div style="margin-bottom:12px;padding:12px;border:1px solid #111;border-radius:8px;background:#fff;color:#222"><div>${(typeof p.metavalue==='object'? JSON.stringify(p.metavalue): String(p.metavalue||''))}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="ignore" data-act="beer" data-kind="bottle" data-post="${p.id}">🍺 $5</button><button class="ignore" data-act="beer" data-kind="bucket" data-post="${p.id}">🪣 $30</button><button class="ignore" data-act="beer" data-kind="case" data-post="${p.id}">📦 $60</button></div><div class="ignore" style="opacity:.7;margin-top:6px">Raised: $${total.toFixed(2)} (🍺 ${bottles}, 🪣 ${buckets}, 📦 ${cases})</div></div>` }).join('') : '<div class="muted">No posts</div>'
   document.getElementById('posts').innerHTML = html
   document.getElementById('donation-total').textContent = 'Donations update live per post'
-  document.getElementById('posts').addEventListener('click', async (e)=>{ const b=e.target.closest('button'); if(!b) return; if(b.getAttribute('data-act')==='beer'){ const kind=b.getAttribute('data-kind'); const postId=Number(b.getAttribute('data-post')); const amt = kind==='bottle'?5: (kind==='bucket'?30:60); try{ const r=await fetch('https://coreenginedb.meoasis2014.workers.dev/donate',{ method:'POST', headers:{ 'Content-Type':'application/json', ...(config.http&&config.http.headers)||{} }, body: JSON.stringify({ postId, amount: amt, kind }) }); const j=r.ok? await r.json():null; if(j && j.ok){ location.reload() } }catch(_){ } } })
+  document.getElementById('posts').addEventListener('click', async (e)=>{
+    const b = e.target.closest('button'); if(!b) return
+    if(b.getAttribute('data-act')==='beer'){
+      const kind=b.getAttribute('data-kind')
+      const postId=Number(b.getAttribute('data-post'))
+      const amt = kind==='bottle'?5: (kind==='bucket'?30:60)
+      try{
+        const r=await fetch('https://coreenginedb.meoasis2014.workers.dev/donate',{ method:'POST', headers:{ 'Content-Type':'application/json', ...(config.http&&config.http.headers)||{} }, body: JSON.stringify({ postId, amount: amt, kind }) })
+        const j=r.ok? await r.json():null
+        if(j && j.ok){ location.reload() }
+      }catch(_){ }
+    }
+  })
 }
-
 main()
 </script>
 </body>

@@ -281,7 +281,7 @@ renderFeed()
   }
   const moreButton = document.querySelector('.more');
   const verticalNav = document.getElementById('verticalNav');
-  
+  if(moreButton && verticalNav){
   moreButton.addEventListener('click', function(e) {
     e.stopPropagation(); // Prevent event bubbling
     
@@ -307,6 +307,7 @@ renderFeed()
       verticalNav.style.display = 'none';
     });
   });
+  }
 
   const sendBtn = document.getElementById('send-btn');
   if(sendBtn){
