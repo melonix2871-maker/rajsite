@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Profile • Kwentong Lasing</title>
+  <link rel="icon" type="image/png" href="./resources/img/icon.png" />
+  <link rel="stylesheet" href="./resources/css/main.css">
+</head>
+<body>
+<div id="page-wrapper" class="container">
+  <header id="site-header" class="tabdesk-header">
+    <div id="header-content">
+       <a href="./"><img width="190" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
+       <h3>User Profile</h3>
+        <ul>
+          <li><a class="ignore" href="./index.html">🍺 Home</a></li>
+          <li><a class="ignore" href="./dashboard.html">🍺 Dashboard</a></li>
+        </ul>
+        <div id="login-btn"><a class="ignore" href="./login.html">Login</a></div>
+      </div>
+  </header>
+
+  <main id="site-content">
+    <div id="header-hero-block">
+      <img src="./resources/img/hero_img.jpg" alt="Kwentong Lasing">
+      <div id="story-title-bar"><h2>Profile</h2></div>
+    </div>
+    <div id="stories-block">
+      <div id="stories-list">
+        <div style="display:flex;gap:20px;align-items:center">
+          <img id="pfp" src="https://i.pravatar.cc/100" style="width:100px;height:100px;border-radius:8px;border:2px solid #f16d00" alt="avatar">
+          <div>
+            <h3 id="uname" class="ignore" style="margin:0"></h3>
+            <div id="donation-total" class="ignore" style="opacity:.7"></div>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <h3 class="ignore" style="color:#f58b01;border-bottom:1px solid rgba(0,0,0,.1);padding-bottom:8px">Posts</h3>
+          <div id="posts"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="cabinet-block">
+    <div id="cabinet">
+      <div id="side-widget"><h3>🍺 Support</h3><p>Buy a bottle, bucket, or case to support this story.</p></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { DB, WriteQueue, buildAdapterFromConfig } from './coreenginedb/client.js'
+
+function q(name){ return new URLSearchParams(location.search).get(name)||'' }
+let config={}
+async function loadConfig(){ try{ const r=await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok) config=await r.json() }catch(_){} if(!config.defaultPrefix) config.defaultPrefix='app_'; config.snapshotUrl='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; if(!config.http) config.http={}; config.http.url='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method='PUT'; try{ const a=sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization=a } }catch(_){} }
+
+function pickUser(all, username){ const urec = all.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&String(r.metakey||'')==='username'&&String(r.metavalue||'')===String(username)); if(!urec) return null; const rel=Number(urec.relid||0); const avatar = all.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='avatar'); return { rel, avatar: avatar&&avatar.metavalue||'' } }
+function listUserPosts(all, rel){ return all.filter(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='posts'&&Number(r.relid||0)===Number(rel||0)) }
+function postDonations(all, postId){ const d = all.filter(r=>String(r.prefix||'')==='donate_'&&String(r.collection||'')==='post'&&Number(r.relid||0)===Number(postId||0)); const totals = d.reduce((m,r)=>{ const k=String(r.metakey||''); const v=Number(r.metavalue||0)||0; m[k]=(m[k]||0)+v; return m },{}); return totals }
+
+async function main(){ const username=q('u')|| (function(){ try{ const a=JSON.parse(sessionStorage.getItem('app_auth')||'null'); return a&&a.username||'' }catch(_){ return '' } })(); await loadConfig(); const adapter=buildAdapterFromConfig({ defaultPrefix: config.defaultPrefix, snapshotUrl: config.snapshotUrl, writeUrl: config.http.url, writeMethod: config.http.method, headers: (config.http&&config.http.headers)||{} }); const db=new DB(adapter); const queue=new WriteQueue(db); db.queue=queue; const data=await db.load(); document.getElementById('uname').textContent = username||'Unknown'; const user=pickUser(data,username); const pfp=document.getElementById('pfp'); if(user && user.avatar && String(user.avatar).startsWith('data:image/')) pfp.src=user.avatar; const posts=listUserPosts(data, user?user.rel:0); const html = posts.length? posts.map(p=>{ const d=postDonations(data,p.id||0); const bottles=Number(d.bottles||0)||0; const buckets=Number(d.buckets||0)||0; const cases=Number(d.cases||0)||0; const total=bottles*5 + buckets*30 + cases*60; return `<div style="margin-bottom:12px;padding:12px;border:1px solid #111;border-radius:8px;background:#fff;color:#222"><div>${(typeof p.metavalue==='object'? JSON.stringify(p.metavalue): String(p.metavalue||''))}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="ignore" data-act="beer" data-kind="bottle" data-post="${p.id}">🍺 $5</button><button class="ignore" data-act="beer" data-kind="bucket" data-post="${p.id}">🪣 $30</button><button class="ignore" data-act="beer" data-kind="case" data-post="${p.id}">📦 $60</button></div><div class="ignore" style="opacity:.7;margin-top:6px">Raised: $${total.toFixed(2)} (🍺 ${bottles}, 🪣 ${buckets}, 📦 ${cases})</div></div>` }).join('') : '<div class="muted">No posts</div>'
+  document.getElementById('posts').innerHTML = html
+  document.getElementById('donation-total').textContent = 'Donations update live per post'
+  document.getElementById('posts').addEventListener('click', async (e)=>{ const b=e.target.closest('button'); if(!b) return; if(b.getAttribute('data-act')==='beer'){ const kind=b.getAttribute('data-kind'); const postId=Number(b.getAttribute('data-post')); const amt = kind==='bottle'?5: (kind==='bucket'?30:60); try{ const r=await fetch('https://coreenginedb.meoasis2014.workers.dev/donate',{ method:'POST', headers:{ 'Content-Type':'application/json', ...(config.http&&config.http.headers)||{} }, body: JSON.stringify({ postId, amount: amt, kind }) }); const j=r.ok? await r.json():null; if(j && j.ok){ location.reload() } }catch(_){ } } })
+}
+
+main()
+</script>
+</body>
+</html>

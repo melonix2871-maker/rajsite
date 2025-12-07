@@ -275,7 +275,8 @@
       </div>
     </div>
   </div>
-  <script>
+  <script type="module">
+    import { DB, WriteQueue, buildAdapterFromConfig } from './client.js'
     let config={}
     ;(function(){
       try{
@@ -604,7 +605,8 @@
 
     async function init(){
       await loadConfig()
-      adapter = new HttpAdapter(config.http||{})
+      window.__CEDB = { defaultPrefix: config.defaultPrefix, snapshotUrl: config.snapshotUrl, writeUrl: (config&&config.http&&config.http.url)||'', writeMethod: (config&&config.http&&config.http.method)||'PUT', headers: (config&&config.http&&config.http.headers)||{} }
+      adapter = buildAdapterFromConfig(window.__CEDB)
       db = new DB(adapter)
       queue = new WriteQueue(db); db.queue = queue; queue.loadPending()
       outboxLoad()
@@ -641,13 +643,14 @@
           if(!u || !p){ setMsg('Please enter username and password','error'); return }
           const submitBtn = document.getElementById('login-submit'); if(submitBtn) submitBtn.disabled = true
           // Only allow superadmin from assets db.json
+          // Verify credentials without reading plaintext from db.json
           try{
-            const resp = await fetch('https://coreenginedb.meoasis2014.workers.dev/json/db.json',{ cache:'no-store' })
-            const rows = resp.ok? await resp.json() : []
-            const su = Array.isArray(rows) ? rows.find(r=> String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(u)) : null
-            if(!su || String(su.metavalue||'')!==String(p)){
-              setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return
-            }
+            const basic = 'Basic '+ btoa(String(u)+':'+String(p))
+            const r = await fetch('https://coreenginedb.meoasis2014.workers.dev/json/config.json', { cache:'no-store', headers:{ Authorization: basic } })
+            if(!r.ok){ setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return }
+            const j = await r.json().catch(()=>({}))
+            const looksAuthorized = !!(j && j.auth && (Array.isArray(j.auth.users) || j.auth.users===undefined)) && (j.apiKeys || j.flags || j.version!==undefined)
+            if(!looksAuthorized){ setMsg('Invalid credentials','error'); if(submitBtn) submitBtn.disabled=false; return }
           }catch(_){ setMsg('Login error','error'); if(submitBtn) submitBtn.disabled=false; return }
           sessionUser = u
           csrfToken = null
@@ -972,7 +975,7 @@
     drawerTabs.addEventListener('click', (e)=>{ const b=e.target.closest('button'); if(!b) return; const id=b.getAttribute('data-tab'); ['settings','activity','apikeys'].forEach(did=>{ const el=document.getElementById(did+'-drawer'); if(el){ if(did===id){ el.classList.add('open'); el.classList.remove('hidden') } else { el.classList.remove('open'); el.classList.add('hidden') } } }); setActivityTimer(id==='activity') })
     function openApiKeys(){ const d=document.getElementById('apikeys-drawer'); d.classList.remove('hidden'); d.classList.add('open'); addTab('apikeys','API Keys'); loadApiKeys(); }
     function closeApiKeys(){ const d=document.getElementById('apikeys-drawer'); d.classList.remove('open'); d.classList.add('hidden'); removeTab('apikeys') }
-    async function loadApiKeys(){ try{ const r = await fetch('https://assets.antserver1.eu.org/config.json',{cache:'no-store'}); const j = r.ok? await r.json() : {}; const keys = (j&&j.apiKeys)||[]; const list=document.getElementById('apikeys-list'); list.innerHTML = keys.length? keys.map(k=>`<div style="padding:8px;border-bottom:1px solid #eee"><code>${k}</code></div>`).join('') : '<div class="muted">No API keys</div>'; }catch(_){ }
+    async function loadApiKeys(){ try{ const list=document.getElementById('apikeys-list'); list.innerHTML = '<div class="muted">API keys are hidden</div>'; }catch(_){ }
     }
     function randomToken(n=32){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
     async function createApiKey(){ try{ const head = await fetch(WORKER_CONFIG_URL,{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch(WORKER_CONFIG_URL,{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }

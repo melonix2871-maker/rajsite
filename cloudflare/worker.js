@@ -3,7 +3,13 @@ export default {
     const url = new URL(req.url)
     const h = new Headers()
     const origin = req.headers.get('Origin') || ''
-    if (origin) {
+    const allowedOrigins = [
+      'https://kwentonglasing.servebeer.com',
+      'https://coreenginedb.meoasis2014.workers.dev',
+      'https://assets.antserver1.eu.org'
+    ]
+    const isAllowed = origin && allowedOrigins.includes(origin)
+    if (origin && isAllowed) {
       h.set('Access-Control-Allow-Origin', origin)
       h.set('Access-Control-Allow-Credentials', 'true')
       h.set('Vary', 'Origin')
@@ -12,11 +18,19 @@ export default {
     }
     h.set('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,PATCH,OPTIONS,DELETE')
     h.set('Access-Control-Allow-Headers', 'Content-Type, content-type, Authorization, authorization, If-Match, if-match, X-Allow-Empty-Write, x-allow-empty-write, X-API-Key, x-api-key, X-CSRF-Token, x-csrf-token')
+    h.set('Referrer-Policy', 'no-referrer')
+    h.set('X-Content-Type-Options', 'nosniff')
+    h.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    h.set('Content-Security-Policy', "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'self'; connect-src *")
     h.set('Access-Control-Expose-Headers', 'ETag')
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h })
 
     const isCfg = url.pathname === '/json/config.json'
     const isDb = url.pathname === '/json/db.json'
+    const isTopup = url.pathname === '/wallet/topup'
+    const isDonate = url.pathname === '/donate'
+    const isForgot = url.pathname === '/auth/forgot'
+    const isWebhook = url.pathname === '/stripe/webhook'
     const isActivity = url.pathname === '/activity'
     const key = isCfg ? 'config.json' : (isDb ? 'db.json' : '')
 
@@ -61,7 +75,7 @@ export default {
       }
     }
 
-    if (!isCfg && !isDb) { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
+    if (!isCfg && !isDb && !isTopup && !isDonate && !isForgot && !isWebhook && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
 
     async function getText(k) {
       const obj = await env.COREENGINEDB.get(k)
@@ -69,12 +83,27 @@ export default {
       const t = await obj.text()
       return t || (isCfg ? '{}' : '[]')
     }
+    async function getJson(k){ try{ const obj = await env.COREENGINEDB.get(k); const t = obj? await obj.text() : ''; return t? JSON.parse(t) : null }catch(_e){ return null } }
+    async function putJson(k, v){ try{ await env.COREENGINEDB.put(k, JSON.stringify(v), { httpMetadata: { contentType: 'application/json' } }) }catch(_e){} }
     async function sha256Hex(s) {
       const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
       return Array.from(new Uint8Array(d)).map(b => b.toString(16).padStart(2, '0')).join('')
     }
     async function putText(k, t) {
       await env.COREENGINEDB.put(k, t, { httpMetadata: { contentType: 'application/json' } })
+    }
+    function tooLarge(req){ const len = parseInt(req.headers.get('Content-Length')||'0'); return isFinite(len) && len > 1024*1024 }
+    function validateRecord(r){
+      if(typeof r !== 'object' || r===null) return false
+      const idOk = ('id' in r) && String(r.id).length>0
+      const relOk = ('relid' in r) && Number.isFinite(Number(r.relid)) && Number(r.relid)>=0
+      const prefixOk = ('prefix' in r) && /^[a-z_]{1,32}$/.test(String(r.prefix||''))
+      const collOk = ('collection' in r) && String(r.collection||'').length<=64
+      const keyOk = ('metakey' in r) && String(r.metakey||'').length<=64
+      const mv = r.metavalue
+      const mvStr = typeof mv==='string'? mv : JSON.stringify(mv||'')
+      const mvOk = mvStr.length <= 16*1024
+      return idOk && relOk && prefixOk && collOk && keyOk && mvOk
     }
 
     async function checkAuth() {
@@ -114,6 +143,8 @@ export default {
       // No fallback credentials; must match configured users
       return { ok: false, reason: 'bad_credentials' }
     }
+    function parseBasic(){ const token = req.headers.get('Authorization') || ''; if(token.startsWith('Basic ')){ try{ const raw=atob(token.split(' ',2)[1]); const parts=raw.split(':'); return { user: parts[0]||'', pass: parts.slice(1).join(':') } }catch(_e){} } return { user:'', pass:'' } }
+    async function rateLimitShouldBlock(tag){ try{ const ip = req.headers.get('cf-connecting-ip') || 'ip'; const key = `ratelimit/${ip}/${tag||'anon'}.json`; let state = await getJson(key) || { count:0, ts: Date.now() }; const now = Date.now(); const windowMs = 60*1000; const limit = 15; if(now - (state.ts||0) > windowMs) state = { count:0, ts: now }; if((state.count||0) >= limit) return true; state.count = (state.count||0) + 1; state.ts = now; await putJson(key, state); return false }catch(_e){ return false } }
     function getCookie(name){
       const raw = req.headers.get('Cookie') || ''
       const parts = raw.split(';').map(s=>s.trim())
@@ -141,25 +172,79 @@ export default {
     }
 
     if (req.method === 'GET') {
-      let t = await getText(key)
-      try { JSON.parse(t || (isCfg ? '{}' : '[]')) } catch (_e) { t = isCfg ? '{}' : '[]' }
-      const et = await sha256Hex(t)
+      let bodyText = await getText(key)
+      try { JSON.parse(bodyText || (isCfg ? '{}' : '[]')) } catch (_e) { bodyText = isCfg ? '{}' : '[]' }
+      // For config.json, return a sanitized public view unless authorized
+      if (isCfg) {
+        const fullCfgText = bodyText
+        let cfg = {}
+        try { cfg = JSON.parse(fullCfgText || '{}') } catch (_e) { cfg = {} }
+        const auth = await checkAuth()
+        let outText
+        if (auth && auth.ok) {
+          outText = JSON.stringify(cfg)
+        } else {
+          const publicCfg = {}
+          try {
+            const flags = (cfg && typeof cfg.flags === 'object') ? cfg.flags : {}
+            const enabled = !!(cfg && cfg.auth && cfg.auth.enabled !== false)
+            publicCfg.flags = flags
+            publicCfg.auth = { enabled }
+            if (cfg && typeof cfg.version !== 'undefined') publicCfg.version = cfg.version
+          } catch (_e) {}
+          outText = JSON.stringify(publicCfg)
+        }
+        const et = await sha256Hex(outText)
+        h.set('Content-Type', 'application/json')
+        h.set('ETag', et)
+        await logEvent('GET', url.pathname, 200, (outText && outText.length) || 0, String((auth && auth.ok && auth.user) || ''), '')
+        return new Response(outText, { status: 200, headers: h })
+      }
+      // Default GET for db.json (public read)
+      const et = await sha256Hex(bodyText)
       h.set('Content-Type', 'application/json')
       h.set('ETag', et)
-      await logEvent('GET', url.pathname, 200, (t && t.length) || 0, '', '')
-      return new Response(t, { status: 200, headers: h })
+      await logEvent('GET', url.pathname, 200, (bodyText && bodyText.length) || 0, '', '')
+      return new Response(bodyText, { status: 200, headers: h })
     }
     if (req.method === 'HEAD') {
       const t = await getText(key)
+      if (isCfg) {
+        let cfg = {}
+        try { cfg = JSON.parse(t || '{}') } catch (_e) { cfg = {} }
+        const auth = await checkAuth()
+        let outText
+        if (auth && auth.ok) {
+          outText = JSON.stringify(cfg)
+        } else {
+          const publicCfg = {}
+          try {
+            const flags = (cfg && typeof cfg.flags === 'object') ? cfg.flags : {}
+            const enabled = !!(cfg && cfg.auth && cfg.auth.enabled !== false)
+            publicCfg.flags = flags
+            publicCfg.auth = { enabled }
+            if (cfg && typeof cfg.version !== 'undefined') publicCfg.version = cfg.version
+          } catch (_e) {}
+          outText = JSON.stringify(publicCfg)
+        }
+        const et = await sha256Hex(outText)
+        h.set('ETag', et)
+        await logEvent('HEAD', url.pathname, 200, 0, String((auth && auth.ok && auth.user) || ''), '')
+        return new Response(null, { status: 200, headers: h })
+      }
       const et = await sha256Hex(t)
       h.set('ETag', et)
       await logEvent('HEAD', url.pathname, 200, 0, '', '')
       return new Response(null, { status: 200, headers: h })
     }
     if (req.method !== 'PUT' && req.method !== 'POST' && req.method !== 'PATCH') return new Response('', { status: 405, headers: h })
+    if (tooLarge(req)) { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 413, 0, '', 'payload_too_large'); return new Response('{"error":"payload_too_large"}', { status: 413, headers: h }) }
 
     const auth = await checkAuth()
     if (!auth.ok) {
+      const candidate = parseBasic().user || ''
+      const blocked = await rateLimitShouldBlock(candidate)
+      if(blocked){ h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 429, 0, candidate, 'rate_limited'); return new Response('{"error":"rate_limited"}', { status: 429, headers: h }) }
       h.set('Content-Type', 'application/json')
       await logEvent(req.method, url.pathname, 401, 0, '', String(auth.reason || 'unauthorized'))
       return new Response(JSON.stringify({ error: auth.reason || 'unauthorized' }), { status: 401, headers: h })
@@ -184,6 +269,11 @@ export default {
       return new Response('{"error":"precondition_failed"}', { status: 412, headers: h })
     }
     const body = await req.text()
+    if(isTopup){ try{ const payload = JSON.parse(body||'{}'); const amt = Number(payload.amount||0); const username = String(payload.username||''); if(!amt || !username){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',400,0,String(auth.user||''),'bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } const urlOut = env.STRIPE_SECRET? 'https://checkout.stripe.com/pay' : '' ; h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',200,0,String(auth.user||''),'topup_init'); return new Response(JSON.stringify({ ok:true, url: urlOut }),{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/wallet/topup',500,0,String(auth.user||''),'topup_error'); return new Response('{"error":"topup_error"}',{ status:500, headers:h }) } }
+    if(isDonate){ try{ const payload = JSON.parse(body||'{}'); const postId = Number(payload.postId||0); const amt = Number(payload.amount||0); const kind = String(payload.kind||''); if(!postId || !amt){ h.set('Content-Type','application/json'); await logEvent('POST','/donate',400,0,String(auth.user||''),'bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } let rows; try{ rows = JSON.parse(current||'[]') }catch(_){ rows=[] } const userRel = 0; // donation debit path would check wallet balance (omitted in stub)
+      const now = new Date().toISOString(); rows.push({ id: crypto.randomUUID(), relid: postId, prefix:'donate_', collection:'post', metakey: (kind==='bottle'?'bottles': (kind==='bucket'?'buckets':'cases')), metavalue: 1, createddate: now, updateddate: now }); const pretty = JSON.stringify(rows,null,2); await putText('db.json', pretty); const newEt = await sha256Hex(pretty); h.set('ETag', newEt); h.set('Content-Type','application/json'); await logEvent('POST','/donate',200,amt,String(auth.user||''),'donate'); return new Response('{"ok":true}',{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/donate',500,0,String(auth.user||''),'donate_error'); return new Response('{"error":"donate_error"}',{ status:500, headers:h }) } }
+    if(isForgot){ try{ const payload = JSON.parse(body||'{}'); const username = String(payload.username||''); const code = String(payload.code||''); const newPassword = String(payload.newPassword||''); if(!username||!code||!newPassword){ h.set('Content-Type','application/json'); await logEvent('POST','/auth/forgot',400,0,'','bad_request'); return new Response('{"error":"bad_request"}',{ status:400, headers:h }) } let rows; try{ rows=JSON.parse(current||'[]') }catch(_){ rows=[] } const urec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&String(r.metakey||'')==='username'&&String(r.metavalue||'')===username); if(!urec){ h.set('Content-Type','application/json'); return new Response('{"error":"not_found"}',{ status:404, headers:h }) } const rel=Number(urec.relid||0); const recRec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='recovery'); let ok=false; try{ const cfgText = await getText('config.json'); let cfg={}; try{ cfg=JSON.parse(cfgText||'{}') }catch(_){ cfg={} } const salt = (function(){ try{ const r=JSON.parse(recRec.metavalue||'{}'); return String(r.salt||'coreenginedb') }catch(_){ return 'coreenginedb' } })(); const iterations = (function(){ try{ const r=JSON.parse(recRec.metavalue||'{}'); return Number(r.iterations||100000) }catch(_){ return 100000 } })(); const recHashStored = (function(){ try{ const r=JSON.parse(recRec.metavalue||'{}'); return String(r.hash||'') }catch(_){ return '' } })(); const calc = await pbkdf2Hex(code, salt, iterations, 32); ok = timingSafeEqual(calc, recHashStored) }catch(_){ ok=false } if(!ok){ h.set('Content-Type','application/json'); return new Response('{"error":"invalid_code"}',{ status:403, headers:h }) } const salt='coreenginedb'; const iterations=100000; const newHash = await pbkdf2Hex(newPassword, salt, iterations, 32); const now=new Date().toISOString(); const passRec = rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='password'); if(passRec){ passRec.metavalue = JSON.stringify({ hash: newHash, salt, iterations }); passRec.updateddate=now } const pretty = JSON.stringify(rows,null,2); await putText('db.json', pretty); const newEt = await sha256Hex(pretty); h.set('ETag', newEt); h.set('Content-Type','application/json'); await logEvent('POST','/auth/forgot',200,0,username,'reset'); return new Response('{"ok":true}',{ status:200, headers:h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent('POST','/auth/forgot',500,0,'','reset_error'); return new Response('{"error":"reset_error"}',{ status:500, headers:h }) } }
+    if(isWebhook){ h.set('Content-Type','application/json'); await logEvent('POST','/stripe/webhook',200,0,'','webhook_stub'); return new Response('{"ok":true}',{ status:200, headers:h }) }
     let parsed
     try { parsed = JSON.parse(body || (isCfg ? '{}' : '[]')) } catch (_e) {
       h.set('Content-Type', 'application/json')
@@ -194,6 +284,36 @@ export default {
       h.set('Content-Type', 'application/json')
       await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'expected_array')
       return new Response('{"error":"expected_array"}', { status: 400, headers: h })
+    }
+    if (isDb && Array.isArray(parsed)) {
+      const ok = parsed.every(validateRecord)
+      if(!ok){ h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'schema_invalid'); return new Response('{"error":"schema_invalid"}', { status: 400, headers: h }) }
+    }
+    if (url.pathname === '/journal') {
+      try{ const id = crypto.randomUUID(); const day = new Date().toISOString().slice(0,10); const k = `journal/${day}/${id}.json`; await putJson(k, parsed); h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 200, (body && body.length)||0, String(auth.user||''), 'journal_append'); return new Response('{"ok":true}', { status: 200, headers: h }) }catch(_e){ h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 500, 0, String(auth.user||''), 'journal_error'); return new Response('{"error":"journal_error"}', { status: 500, headers: h }) }
+    }
+    if (url.pathname === '/compact') {
+      try{
+        const day = url.searchParams.get('day') || new Date().toISOString().slice(0,10)
+        const listed = await env.COREENGINEDB.list({ prefix: `journal/${day}/`, limit: 10000 })
+        let latestText = ''
+        for (const obj of (listed && listed.objects) || []) {
+          try{ const r = await env.COREENGINEDB.get(obj.key); const t = r? await r.text() : ''; if(t) latestText = t }catch(_e){}
+        }
+        let target = []
+        try{ const j = latestText? JSON.parse(latestText) : null; if(Array.isArray(j)) target = j }catch(_e){}
+        if(!Array.isArray(target) || target.length===0){ h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 400, 0, String(auth.user||''), 'no_journal'); return new Response('{"error":"no_journal"}', { status: 400, headers: h }) }
+        const et = await sha256Hex(current)
+        const ifm = req.headers.get('If-Match') || ''
+        if(!ifm || ifm !== et){ h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 412, 0, String(auth.user||''), 'precondition_failed'); return new Response('{"error":"precondition_failed"}', { status: 412, headers: h }) }
+        const pretty = JSON.stringify(target, null, 2)
+        await putText('db.json', pretty)
+        const newEtag = await sha256Hex(pretty)
+        h.set('Content-Type','application/json')
+        h.set('ETag', newEtag)
+        await logEvent(req.method, url.pathname, 200, (pretty && pretty.length)||0, String(auth.user||''), 'compact_applied')
+        return new Response('{"ok":true}', { status: 200, headers: h })
+      }catch(_e){ h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 500, 0, String(auth.user||''), 'compact_error'); return new Response('{"error":"compact_error"}', { status: 500, headers: h }) }
     }
     if (isCfg && typeof parsed !== 'object') {
       h.set('Content-Type', 'application/json')

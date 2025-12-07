@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard • Kwentong Lasing</title>
+  <link rel="icon" type="image/png" href="./resources/img/icon.png" />
+  <link rel="stylesheet" href="./resources/css/main.css">
+</head>
+<body>
+<div id="page-wrapper" class="container">
+  <header id="site-header" class="tabdesk-header">
+    <div id="header-content">
+       <a href="./"><img width="190" src="./resources/img/logo.png" alt="Kwentong Lasing"></a>
+       <h3>Your Dashboard</h3>
+        <ul>
+          <li><a class="ignore" href="./index.html">🍺 Home</a></li>
+          <li><a class="ignore" href="./profile.html">🍺 Profile</a></li>
+          <li><a href="./dashboard.html">🍺 Dashboard</a></li>
+        </ul>
+        <div id="login-btn"><a class="ignore" href="./login.html">Login</a></div>
+        <div id="online-users-counter" class="ignore"><span class="circ"></span> <b>125</b> users online now</div>
+      </div>
+  </header>
+
+  <main id="site-content">
+    <div id="header-hero-block">
+      <img src="./resources/img/hero_img.jpg" alt="Kwentong Lasing">
+      <div id="story-title-bar"><h2>Wallet & Profile</h2></div>
+    </div>
+    <div id="stories-block">
+      <div id="stories-list">
+        <div id="user-panel" style="display:flex;gap:20px;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px">
+            <h3 class="ignore" style="color:#f58b01;border-bottom:1px solid rgba(0,0,0,.1);padding-bottom:8px">Avatar</h3>
+            <div style="display:flex;gap:12px;align-items:center">
+              <img id="avatar-preview" src="https://i.pravatar.cc/100" style="width:100px;height:100px;border-radius:8px;border:2px solid #f16d00" alt="avatar">
+              <div>
+                <input type="file" id="avatar-file" accept="image/*">
+                <button id="avatar-save" class="ignore" style="margin-top:8px">Save Avatar</button>
+                <div id="avatar-msg" class="ignore" style="margin-top:6px"></div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1;min-width:280px">
+            <h3 class="ignore" style="color:#f58b01;border-bottom:1px solid rgba(0,0,0,.1);padding-bottom:8px">Wallet</h3>
+            <div style="display:flex;gap:12px;align-items:center">
+              <div>
+                <div class="ignore">Balance</div>
+                <div id="wallet-balance" style="font-size:24px;font-weight:bold">$0</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+              <button data-amt="5" class="ignore">Top-up $5</button>
+              <button data-amt="10" class="ignore">Top-up $10</button>
+              <button data-amt="20" class="ignore">Top-up $20</button>
+              <button data-amt="30" class="ignore">Top-up $30</button>
+              <button data-amt="60" class="ignore">Top-up $60</button>
+            </div>
+            <div id="wallet-msg" class="ignore" style="margin-top:6px"></div>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <h3 class="ignore" style="color:#f58b01;border-bottom:1px solid rgba(0,0,0,.1);padding-bottom:8px">Recent Activity</h3>
+          <div id="ledger" class="ignore"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="cabinet-block">
+    <div id="cabinet">
+      <div id="side-widget"><h3>🍺 Tips</h3><p>Upload a square image for best results. Donations are instant from your wallet.</p></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { DB, WriteQueue, buildAdapterFromConfig, resizeToDataUrl } from './coreenginedb/client.js'
+
+function getAuth(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } }
+function ensureLogged(){ const a=getAuth(); if(!a){ window.location.href='login.html'; return null } return a }
+function setLoginUI(){ const a=getAuth(); const loginLinks = Array.from(document.querySelectorAll('#login-btn a')); if(loginLinks.length){ if(a&&a.username){ loginLinks.forEach(x=>{ x.textContent='Welcome To KL, '+a.username; x.href='dashboard.html' }) } } }
+
+let config={}
+async function loadConfig(){ try{ const r=await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok) config=await r.json() }catch(_){} if(!config.defaultPrefix) config.defaultPrefix='app_'; config.snapshotUrl='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; if(!config.http) config.http={}; config.http.url='https://coreenginedb.meoasis2014.workers.dev/json/db.json'; config.http.method='PUT'; try{ const a=sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization=a } }catch(_){} }
+
+function findUserRows(all, user){ const rel = Number(user.relid||0); const rows = all.filter(r=>String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && Number(r.relid||0)===rel); return rows }
+function getWalletBalance(all, user){ const rel=Number(user.relid||0); const row = all.find(r=>String(r.prefix||'')==='wallet_' && String(r.collection||'')==='balance' && Number(r.relid||0)===rel && String(r.metakey||'')==='amount'); return Number(row&&row.metavalue||0)||0 }
+function getLedger(all, user){ const rel=Number(user.relid||0); return all.filter(r=>String(r.prefix||'')==='wallet_' && String(r.collection||'')==='ledger' && Number(r.relid||0)===rel) }
+
+async function main(){ const auth=ensureLogged(); if(!auth) return; setLoginUI(); await loadConfig(); const adapter=buildAdapterFromConfig({ defaultPrefix: config.defaultPrefix, snapshotUrl: config.snapshotUrl, writeUrl: config.http.url, writeMethod: config.http.method, headers: (config.http&&config.http.headers)||{} }); const db=new DB(adapter); const queue=new WriteQueue(db); db.queue=queue; const data=await db.load(); const userRows=findUserRows(data,auth); const avatarRow=userRows.find(r=>String(r.metakey||'')==='avatar'); const avatarPreview=document.getElementById('avatar-preview'); if(avatarRow && String(avatarRow.metavalue||'').startsWith('data:image/')) avatarPreview.src=String(avatarRow.metavalue); const bal=getWalletBalance(data,auth); document.getElementById('wallet-balance').textContent='$'+bal.toFixed(2);
+  const ledger=getLedger(data,auth).slice().reverse().slice(0,20); document.getElementById('ledger').innerHTML = ledger.length? ledger.map(e=>`<div style="padding:8px;border-bottom:1px solid #eee">${e.metakey||''} <span class="muted">${e.metavalue||''}</span> <span class="muted">${e.updateddate||e.createddate||''}</span></div>`).join('') : '<div class="muted">No activity</div>'
+
+  document.getElementById('avatar-save').addEventListener('click', async ()=>{ const f=document.getElementById('avatar-file').files[0]; const msg=document.getElementById('avatar-msg'); if(!f){ msg.textContent='Choose an image'; return } try{ const dataUrl=await resizeToDataUrl(f,128,'image/webp',0.7); avatarPreview.src=dataUrl; const rel=Number(auth.relid||0); let rows=data.slice(); const existing=rows.find(r=>String(r.prefix||'')==='app_'&&String(r.collection||'')==='users'&&Number(r.relid||0)===rel&&String(r.metakey||'')==='avatar'); const now=new Date().toISOString(); if(existing){ existing.metavalue=dataUrl; existing.updateddate=now } else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'app_', collection:'users', metakey:'avatar', metavalue:dataUrl, createddate: now, updateddate: now }) } await adapter.write(rows); msg.textContent='Saved'; }catch(e){ msg.textContent='Save failed' } })
+
+  document.querySelectorAll('[data-amt]').forEach(btn=>{ btn.addEventListener('click', async ()=>{ const amt=Number(btn.getAttribute('data-amt')||'0'); const msg=document.getElementById('wallet-msg'); try{ const r=await fetch('https://coreenginedb.meoasis2014.workers.dev/wallet/topup', { method:'POST', headers:{ 'Content-Type':'application/json', ...(config.http&&config.http.headers)||{} }, body: JSON.stringify({ amount: amt, username: auth.username }) }); const j=r.ok? await r.json() : null; if(j && j.url){ window.location.href = j.url } else { msg.textContent='Top-up initialized' } }catch(_){ msg.textContent='Top-up error' } }) })
+}
+
+main()
+</script>
+</body>
+</html>
