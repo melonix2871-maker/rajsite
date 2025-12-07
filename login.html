@@ -244,30 +244,34 @@ try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app 
 <script>
 async function tryLogin(username, password){
   try{
-    const base = new URL(WRITE_DB_URL, location.origin).origin
-    const suResp = await fetch(base + '/json/superuser?metakey=' + encodeURIComponent(username), { cache:'no-store', mode:'cors', credentials:'omit' })
-    let su=null; if(suResp.ok){ try{ su = await suResp.json() }catch(_){ su=null } }
-    if(su && String(su.metavalue||'')===String(password)){
+    async function readRowsSafely(){
+      const urls=[WRITE_DB_URL, 'https://assets.antserver1.eu.org/db.json']
+      for(const u of urls){
+        try{ const r=await fetch(u, { cache:'no-store', mode:'cors', credentials:'omit' }); if(r.ok){ const t=await r.text(); try{ const j=JSON.parse(t); if(Array.isArray(j)) return j }catch(_){ } } }catch(_e){}
+      }
+      return []
+    }
+    const rows = await readRowsSafely()
+    if(!Array.isArray(rows) || !rows.length){ document.getElementById('status').textContent='❌ Cannot read users'; return }
+    const suRow = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(username)) || null
+    if(suRow && String(suRow.metavalue||'')===String(password)){
       sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username }))
       sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password)))
       window.location.href='admin.html'
       return
     }
-    const usersResp = await fetch(base + '/json/users?username=' + encodeURIComponent(username), { cache:'no-store', mode:'cors', credentials:'omit' })
-    if(!usersResp.ok){ document.getElementById('status').textContent = '❌ Cannot read users'; return }
-    const urows = await usersResp.json().catch(()=>[])
-    const urec = Array.isArray(urows)? urows.find(r => String(r.metakey||'')==='username') : null
+    const urec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='username' && String(r.metavalue||'')===String(username)) || null
     if(urec){
-      const passrec = Array.isArray(urows)? urows.find(r => String(r.metakey||'')==='password' && Number(r.relid||0)===Number(urec.relid||0)) : null
+      const passrec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='password' && Number(r.relid||0)===Number(urec.relid||0)) || null
       if(passrec){
-        let ok = false
+        let ok=false
         try{
-          const payload = JSON.parse(String(passrec.metavalue||''))
+          const payload = typeof passrec.metavalue==='string'? JSON.parse(passrec.metavalue) : passrec.metavalue
           if(payload && payload.hash && payload.salt && payload.iterations){
             const calc = await pbkdf2Hex(password, String(payload.salt), Number(payload.iterations||100000), 32)
             ok = (String(calc) === String(payload.hash))
           }
-        }catch(_e){ ok = false }
+        }catch(_){ ok=false }
         if(!ok){ ok = (String(passrec.metavalue||'')===String(password)) }
         if(ok){
           sessionStorage.setItem('app_auth', JSON.stringify({ role:'user', username, relid:Number(urec.relid||0) }))
@@ -276,8 +280,8 @@ async function tryLogin(username, password){
         }
       }
     }
-    document.getElementById('status').textContent = '❌ Invalid credentials'
-  }catch(e){ document.getElementById('status').textContent = '❌ Login error' }
+    document.getElementById('status').textContent='❌ Invalid credentials'
+  }catch(e){ document.getElementById('status').textContent='❌ Login error' }
 }
 document.getElementById('login-form').addEventListener('submit', (e)=>{
   e.preventDefault()
