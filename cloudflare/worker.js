@@ -34,6 +34,8 @@ export default {
     const isWebhook = url.pathname === '/stripe/webhook'
     const isAdminSuper = url.pathname === '/admin/superadmin'
     const isAuthLogin = url.pathname === '/auth/login'
+    const isAuthSession = url.pathname === '/auth/session'
+    const isAuthLogout = url.pathname === '/auth/logout'
     const isActivity = url.pathname === '/activity'
     const key = isCfg ? 'config.json' : ((isDb || isPublicDb) ? 'db.json' : '')
 
@@ -78,7 +80,7 @@ export default {
       }
     }
 
-    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && !isAdminSuper && !isAuthLogin && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
+    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && !isAdminSuper && !isAuthLogin && !isAuthSession && !isAuthLogout && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
 
     if (isWebhook && req.method === 'POST') {
       const body = await req.text()
@@ -155,8 +157,8 @@ export default {
       if (auth.enabled === false) return { ok: true, user: 'disabled' }
       const token = req.headers.get('Authorization') || ''
       const apiKeyHeader = req.headers.get('X-API-Key') || ''
-      if (apiKeyHeader && apiKeys.includes(apiKeyHeader)) return { ok: true, user: 'apikey' }
-      if (token.startsWith('Bearer ')) { const t = token.split(' ', 2)[1]; if (apiKeys.includes(t)) return { ok: true, user: 'bearer' } }
+      if (apiKeyHeader && apiKeys.includes(apiKeyHeader)) return { ok: true, user: 'apikey', role:'user' }
+      if (token.startsWith('Bearer ')) { const t = token.split(' ', 2)[1]; if (apiKeys.includes(t)) return { ok: true, user: 'bearer', role:'user' } }
       let username = null, password = ''
       if (token.startsWith('Basic ')) {
         try {
@@ -168,6 +170,7 @@ export default {
       }
       if (!username) return { ok: false, reason: 'unauthorized' }
       const users = Array.isArray(auth.users) ? auth.users : []
+      let role = 'user'
       const saltDefault = auth.salt || 'coreenginedb'
       const user = users.find(u => String(u.username) === String(username)) || null
       if (user) {
@@ -176,7 +179,7 @@ export default {
         const stored = user.hash || ''
         if (stored) {
           const calc = await pbkdf2Hex(password, salt, iterations, 32)
-          if (timingSafeEqual(calc, stored)) return { ok: true, user: username }
+          if (timingSafeEqual(calc, stored)) return { ok: true, user: username, role }
           return { ok: false, reason: 'bad_credentials' }
         }
       }
@@ -203,7 +206,7 @@ export default {
             if (stored) {
               const calc = await pbkdf2Hex(password, salt, iterations, 32)
               if (timingSafeEqual(calc, stored) && String(firstUser.metavalue||'') === String(username)) {
-                return { ok: true, user: username }
+                return { ok: true, user: username, role }
               }
             }
           }
@@ -228,7 +231,8 @@ export default {
               const calc = await pbkdf2Hex(password, salt, iterations, 32)
               const expectedUser = String(superRec.metakey||'')
               if (timingSafeEqual(calc, stored) && timingSafeEqual(String(username||''), expectedUser)) {
-                return { ok: true, user: username }
+                role = 'superadmin'
+                return { ok: true, user: username, role }
               }
             }
           }
@@ -334,7 +338,7 @@ export default {
         try { cfg = JSON.parse(t || '{}') } catch (_e) { cfg = {} }
         const auth = await checkAuth()
         let outText
-        if (auth && auth.ok) {
+        if (auth && auth.ok && String(auth.role||'')==='superadmin') {
           outText = JSON.stringify(cfg)
         } else {
           const publicCfg = {}
@@ -477,6 +481,18 @@ export default {
         return new Response('{"error":"login_error"}', { status: 500, headers: h })
       }
     }
+    if (isAuthSession && req.method === 'GET') {
+      const sess = await verifySession(getCookie('cedb_session'))
+      h.set('Content-Type','application/json')
+      if (sess && sess.u) { await logEvent('GET','/auth/session',200,0,String(sess.u||''),''); return new Response(JSON.stringify({ ok:true, role: String(sess.role||'user') }), { status: 200, headers: h }) }
+      await logEvent('GET','/auth/session',401,0,'','unauthorized')
+      return new Response('{"error":"unauthorized"}', { status: 401, headers: h })
+    }
+    if (isAuthLogout && (req.method === 'POST' || req.method === 'GET')) {
+      h.append('Set-Cookie','cedb_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
+      await logEvent(req.method,'/auth/logout',200,0,'','logout')
+      return new Response('', { status: 200, headers: h })
+    }
     if (tooLarge(req)) { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 413, 0, '', 'payload_too_large'); return new Response('{"error":"payload_too_large"}', { status: 413, headers: h }) }
 
     const auth = await checkAuth()
@@ -584,3 +600,10 @@ export default {
 }
     async function makeSession(u, role, ttlSec){ const now = Math.floor(Date.now()/1000); const exp = now + (Number(ttlSec||3600)); const payload = JSON.stringify({ u:String(u||''), role:String(role||'user'), exp }); const secret = env.ADMIN_TOKEN || ''; const sig = await hmacHex(secret, payload); const b64 = btoa(payload); return `${b64}.${sig}` }
     async function verifySession(tok){ try{ if(!tok) return null; const parts = String(tok).split('.'); if(parts.length!==2) return null; const payload = atob(parts[0]); const sig = parts[1]; const secret = env.ADMIN_TOKEN || ''; const calc = await hmacHex(secret, payload); if(!timingSafeEqual(calc, sig)) return null; const j = JSON.parse(payload||'{}'); if(!j || !j.exp || (Math.floor(Date.now()/1000) > Number(j.exp))) return null; return j }catch(_e){ return null } }
+      if (isDb && String(authDb.role||'')!=='superadmin') {
+        h.set('Content-Type','application/json')
+        await logEvent('GET', url.pathname, 403, 0, String(authDb.user||''), 'forbidden')
+        return new Response('{"error":"forbidden"}', { status: 403, headers: h })
+      }
+      if (isDb && String(authDbHead.role||'')!=='superadmin') { await logEvent('HEAD', url.pathname, 403, 0, String(authDbHead.user||''), 'forbidden'); return new Response(null,{ status:403, headers:h }) }
+    if (isDb && String(auth.role||'')!=='superadmin') { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 403, 0, String(auth.user||''), 'forbidden'); return new Response('{"error":"forbidden"}', { status:403, headers:h }) }
