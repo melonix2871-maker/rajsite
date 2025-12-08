@@ -144,6 +144,9 @@ export default {
     }
 
     async function checkAuth() {
+      // Cookie-based session
+      const sess = await verifySession(getCookie('cedb_session'))
+      if(sess && sess.u){ return { ok:true, user: String(sess.u), role: String(sess.role||'user') } }
       const cfgText = await getText('config.json')
       let cfg = {}
       try { cfg = JSON.parse(cfgText || '{}') } catch (_e) { cfg = {} }
@@ -465,7 +468,7 @@ export default {
           }
         }
         h.set('Content-Type','application/json')
-        if (ok) { await logEvent('POST','/auth/login',200,0,username,'login_ok'); return new Response(JSON.stringify({ ok:true, role }), { status: 200, headers: h }) }
+        if (ok) { const tok = await makeSession(username, role, (env.SESSION_TTL ? Number(env.SESSION_TTL) : 3600)); h.append('Set-Cookie', `cedb_session=${tok}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${env.SESSION_TTL? Number(env.SESSION_TTL): 3600}`); await logEvent('POST','/auth/login',200,0,username,'login_ok'); return new Response(JSON.stringify({ ok:true }), { status: 200, headers: h }) }
         await logEvent('POST','/auth/login',401,0,username,'bad_credentials')
         return new Response('{"error":"bad_credentials"}', { status: 401, headers: h })
       } catch (_e) {
@@ -579,3 +582,5 @@ export default {
     return new Response('{"ok":true}', { status: 200, headers: h })
   }
 }
+    async function makeSession(u, role, ttlSec){ const now = Math.floor(Date.now()/1000); const exp = now + (Number(ttlSec||3600)); const payload = JSON.stringify({ u:String(u||''), role:String(role||'user'), exp }); const secret = env.ADMIN_TOKEN || ''; const sig = await hmacHex(secret, payload); const b64 = btoa(payload); return `${b64}.${sig}` }
+    async function verifySession(tok){ try{ if(!tok) return null; const parts = String(tok).split('.'); if(parts.length!==2) return null; const payload = atob(parts[0]); const sig = parts[1]; const secret = env.ADMIN_TOKEN || ''; const calc = await hmacHex(secret, payload); if(!timingSafeEqual(calc, sig)) return null; const j = JSON.parse(payload||'{}'); if(!j || !j.exp || (Math.floor(Date.now()/1000) > Number(j.exp))) return null; return j }catch(_e){ return null } }

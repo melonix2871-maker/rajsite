@@ -85,6 +85,16 @@ Authentication & authorization
 - CSRF: required for writes when Authorization header is absent
 - Rate limiting: per IP and username tag on failed auth and selected routes
 - Timing‑safe comparisons to reduce side‑channels
+- Client PBKDF2 helper (used in admin console):
+  - `async function pbkdf2Hex(password, salt, iterations, length){ const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']); const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: new TextEncoder().encode(salt), iterations }, key, (length||32)*8); return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('') }`
+  - Purpose: derive hex digest for client‑side password setup; never logs inputs; only hashes are written server‑side via protected routes
+
+Sessions (cookie‑based)
+
+- Login issues an HttpOnly, Secure, SameSite=Strict cookie `cedb_session` containing an HMAC‑signed payload `{ u, role, exp }`
+- Signature uses Worker secret (`ADMIN_TOKEN` or `SESSION_SECRET`); expiration defaults to 3600s
+- Worker validates the cookie in `checkAuth()` before headers; clients don’t store credentials in web storage
+- Admin UI and protected routes rely on server auth; client role strings aren’t used for authorization
 
 Secrets & keys
 
