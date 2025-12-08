@@ -250,7 +250,7 @@
 const WRITE_CONFIG_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
 const WRITE_DB_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.dbUrl) return String(window.__REMOTE.dbUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u') })()
 function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_URL } }
-try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='admin.html' } else if(app){ window.location.href='index.html' } }catch(_){ }
+try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='coreenginedb/database.html' } else if(app){ window.location.href='index.html' } }catch(_){ }
 </script>
 <script>
 const AUTH_LOGIN_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9sb2dpbg==')
@@ -259,8 +259,14 @@ async function tryLogin(username, password){
     const r = await fetch(AUTH_LOGIN_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }), mode:'cors', credentials:'include' })
     const j = r.ok? await r.json(): null
     if(j && j.ok){
-      sessionStorage.setItem('app_auth', JSON.stringify({ username }))
-      window.location.href = 'index.html'
+      let role = 'user'
+      try{
+        const sr = await fetch(AUTH_LOGIN_URL.replace('/auth/login','/auth/session'), { method:'GET', mode:'cors', credentials:'include' })
+        const sj = sr.ok? await sr.json(): null
+        if(sj && sj.ok && sj.role) role = String(sj.role||'user')
+      }catch(_){ }
+      sessionStorage.setItem('app_auth', JSON.stringify({ username, role }))
+      if(role==='superadmin') window.location.href = 'coreenginedb/database.html'; else window.location.href = 'index.html'
       return
     }
     document.getElementById('status').textContent='❌ Invalid credentials'
