@@ -38,20 +38,13 @@
 <script>
 const WRITE_DB_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.dbUrl) return String(window.__REMOTE.dbUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u') })()
 const WORKER_CONFIG_URL = (function(){ try{ if(window.__REMOTE && window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
+const AUTH_SESSION_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9zZXNzaW9u')
+const AUTH_LOGOUT_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9sb2dvdXQ=')
 function getCoreUrls(){ return { dbUrl: WRITE_DB_URL } }
-function requireSession(){
-  const app = (function(){ try{ return JSON.parse(sessionStorage.getItem('app_auth')||'null') }catch(_){ return null } })()
-  if(!app || String(app.role||'')!=='superadmin'){
-    window.location.href='/login.html'
-    return null
-  }
-  const auth=sessionStorage.getItem('cedb_auth')||''
-  if(!auth){ window.location.href='/login.html'; return null }
-  return auth
-}
-function setAuthedUI(){ document.getElementById('auth-status').textContent='✅ Session active'; document.getElementById('logout').style.display=''; document.getElementById('logout').addEventListener('click',()=>{ try{ sessionStorage.removeItem('cedb_auth'); sessionStorage.removeItem('app_auth') }catch(_e){} window.location.href='login.html' }) }
-async function readRemote(){ try{ const {dbUrl}=getCoreUrls(); const auth=requireSession(); if(!auth) return []; const r=await fetch(dbUrl,{ cache:'no-store', mode:'cors', credentials:'omit', headers:{ 'Authorization':auth } }); if(!r.ok) return []; const et=r.headers.get('etag'); if(et) window.cedbEtag = et; const t=await r.text(); try{ return JSON.parse(t) }catch(_){ return [] } }catch(_e){ return [] } }
-async function writeRemote(records, opts){ try{ const {dbUrl}=getCoreUrls(); const auth=requireSession(); if(!auth) return false; const et=window.cedbEtag||''; const csrf=(sessionStorage.getItem('csrf_token')||''); const headers=Object.assign({ 'Content-Type':'application/json', 'Authorization':auth, 'X-CSRF-Token': csrf }, et?{ 'If-Match': et }: {}, (opts&&opts.allowEmpty)? { 'X-Allow-Empty-Write':'true' } : {}); const body=JSON.stringify(records,null,2); const r=await fetch(dbUrl,{ method:'PUT', headers, body, mode:'cors', credentials:'omit' }); if(r.status===412) { document.getElementById('status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok) { document.getElementById('status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) window.cedbEtag = newEt; return true }catch(_e){ document.getElementById('status').textContent='❌ Write error'; return false } }
+async function requireSession(){ try{ const r=await fetch(AUTH_SESSION_URL,{ credentials:'include' }); const j=r.ok? await r.json():null; if(j && j.ok && String(j.role||'')==='superadmin'){ return true } }catch(_){ } window.location.href='/login.html'; return false }
+function setAuthedUI(){ document.getElementById('auth-status').textContent='✅ Session active'; document.getElementById('logout').style.display=''; document.getElementById('logout').addEventListener('click', async()=>{ try{ await fetch(AUTH_LOGOUT_URL,{ credentials:'include' }) }catch(_e){} try{ sessionStorage.removeItem('app_auth') }catch(_e){} window.location.href='login.html' }) }
+async function readRemote(){ try{ const {dbUrl}=getCoreUrls(); const ok=await requireSession(); if(!ok) return []; const r=await fetch(dbUrl,{ cache:'no-store', mode:'cors', credentials:'include' }); if(!r.ok) return []; const et=r.headers.get('etag'); if(et) window.cedbEtag = et; const t=await r.text(); try{ return JSON.parse(t) }catch(_){ return [] } }catch(_e){ return [] } }
+async function writeRemote(records, opts){ try{ const {dbUrl}=getCoreUrls(); const ok=await requireSession(); if(!ok) return false; const et=window.cedbEtag||''; const csrf=(sessionStorage.getItem('csrf_token')||''); const headers=Object.assign({ 'Content-Type':'application/json', 'X-CSRF-Token': csrf }, et?{ 'If-Match': et }: {}, (opts&&opts.allowEmpty)? { 'X-Allow-Empty-Write':'true' } : {}); const body=JSON.stringify(records,null,2); const r=await fetch(dbUrl,{ method:'PUT', headers, body, mode:'cors', credentials:'include' }); if(r.status===412) { document.getElementById('status').textContent='❌ Conflict — refresh and retry'; return false } if(!r.ok) { document.getElementById('status').textContent='❌ Write failed'; return false } const newEt=r.headers.get('etag'); if(newEt) window.cedbEtag = newEt; return true }catch(_e){ document.getElementById('status').textContent='❌ Write error'; return false } }
 (function(){ if(requireSession()){ setAuthedUI() } })();
 
 function nextId(){ return crypto.randomUUID(); }
@@ -85,7 +78,7 @@ document.getElementById('row-form').addEventListener('submit', async e=>{
   }
 });
 
-async function loadStripe(){ try{ const r=await fetch(WORKER_CONFIG_URL,{ cache:'no-store', headers:{ 'Authorization': requireSession()||'' } }); const j=r.ok? await r.json():{}; const s=j&&j.stripe||{}; document.getElementById('stripe-pub').value = s.publishableKey||''; const p=(s.prices)||{}; document.getElementById('stripe-price-bottle').value = p.bottle||''; document.getElementById('stripe-price-bucket').value = p.bucket||''; document.getElementById('stripe-price-case').value = p.case||''; }catch(_){ }
+async function loadStripe(){ try{ const ok=await requireSession(); if(!ok) return; const r=await fetch(WORKER_CONFIG_URL,{ cache:'no-store', credentials:'include' }); const j=r.ok? await r.json():{}; const s=j&&j.stripe||{}; document.getElementById('stripe-pub').value = s.publishableKey||''; const p=(s.prices)||{}; document.getElementById('stripe-price-bottle').value = p.bottle||''; document.getElementById('stripe-price-bucket').value = p.bucket||''; document.getElementById('stripe-price-case').value = p.case||''; }catch(_){ }
 }
 async function sha256Hex(s){ const d=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s||''))); return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('') }
 function timeAgo(ts){ try{ const d=new Date(ts); const s=Math.floor((Date.now()-d.getTime())/1000); if(!isFinite(s)) return ''; if(s<60) return s+"s ago"; const m=Math.floor(s/60); if(m<60) return m+"m ago"; const h=Math.floor(m/60); if(h<24) return h+"h ago"; const d2=Math.floor(h/24); if(d2<30) return d2+"d ago"; const mo=Math.floor(d2/30); if(mo<12) return mo+"mo ago"; const y=Math.floor(mo/12); return y+"y ago" }catch(_){ return '' } }
@@ -117,9 +110,9 @@ renderMonitoring()
 </script>
 <script>
 function el(tag, attrs={}, children=[]) { const e=document.createElement(tag); Object.entries(attrs||{}).forEach(([k,v])=>{ if(k==='class') e.className=v; else e.setAttribute(k,v) }); children.forEach(c=>{ if(typeof c==='string') e.appendChild(document.createTextNode(c)); else e.appendChild(c) }); return e }
-async function fetchAll(){ const auth=requireSession(); if(!auth) return { rows:[], cfg:{}, acts:[] }; const [rowsRes,cfgRes,dayRes] = await Promise.all([
-  fetch(WRITE_DB_URL,{ cache:'no-store', headers:{ 'Authorization':auth } }),
-  fetch(WORKER_CONFIG_URL,{ cache:'no-store', headers:{ 'Authorization':auth } }),
+async function fetchAll(){ const ok=await requireSession(); if(!ok) return { rows:[], cfg:{}, acts:[] }; const [rowsRes,cfgRes,dayRes] = await Promise.all([
+  fetch(WRITE_DB_URL,{ cache:'no-store', credentials:'include' }),
+  fetch(WORKER_CONFIG_URL,{ cache:'no-store', credentials:'include' }),
   fetch('https://coreenginedb.meoasis2014.workers.dev/activity?day='+new Date().toISOString().slice(0,10)+'&limit=500')
 ]); const rows = rowsRes.ok? await rowsRes.json():[]; const cfg = cfgRes.ok? await cfgRes.json():{}; const acts = dayRes.ok? await dayRes.json():[]; return { rows:Array.isArray(rows)?rows:[], cfg: (cfg||{}), acts: Array.isArray(acts)?acts:[] }
 }
