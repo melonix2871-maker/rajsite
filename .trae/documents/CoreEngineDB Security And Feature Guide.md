@@ -4,6 +4,14 @@ CoreEngineDB overview
 - Pages: index (feed + donations), profile (user posts + totals), dashboard (avatar + wallet + top‑up), admin console (full CRUD), admin.html (lightweight admin monitor)
 - Worker: Cloudflare Worker provides sanitized reads, authenticated writes, Stripe integration, activity logs
 
+KL App features
+
+- Feed (Home): lists posts with avatars, donation counts, and buy‑beer actions
+- Profile: shows a user’s posts, per‑post totals, and avatar; supports donations
+- Dashboard: avatar upload (client‑side resize), wallet balance, recent ledger, Stripe top‑up via Worker
+- Auth UI: session stored in `sessionStorage` (`app_auth`, `cedb_auth` headers for Worker)
+- Timestamps: rendered as relative (e.g., 2m ago) with readable fallback everywhere
+
 Data model
 
 - Record fields: id, relid, prefix, collection, metakey, metavalue, createddate, updateddate
@@ -21,6 +29,53 @@ Endpoints (Worker)
 - POST /stripe/webhook: verifies events using STRIPE_WEBHOOK_SECRET and updates wallet
 - GET /activity: lists worker activity logs by day
 
+CRUD usage (client)
+
+```js
+import { DB, WriteQueue, buildAdapterFromConfig } from './coreenginedb/client.js'
+
+// Build adapter from sanitized config
+const adapter = buildAdapterFromConfig({
+  defaultPrefix: 'app_',
+  snapshotUrl: '<public.db.json>',
+  writeUrl: '<db.json>',
+  writeMethod: 'PUT',
+  headers: { Authorization: sessionStorage.getItem('cedb_auth') || '' }
+})
+const db = new DB(adapter)
+db.queue = new WriteQueue(db)
+
+// Read all rows (public snapshot or authorized private)
+const rows = await db.load()
+
+// Create
+await db.create({
+  id: crypto.randomUUID(),
+  relid: 101,
+  prefix: 'app_',
+  collection: 'posts',
+  metakey: 'content',
+  metavalue: 'Hello world',
+  createddate: new Date().toISOString(),
+  updateddate: new Date().toISOString()
+})
+
+// Update (by id)
+await db.update('some-id', { metavalue: 'Updated content', updateddate: new Date().toISOString() })
+
+// Delete (by id)
+await db.remove('some-id')
+
+// Persist (ETag precondition handled inside adapter)
+await adapter.write(db.rows)
+```
+
+CRUD usage (admin console)
+
+- Use `coreenginedb/database.html` for full UI CRUD: New, Edit, Save, Delete, pagination, filters, import/export
+- Conflict panel shows remote vs local; choose local/remote/merge; WriteQueue batches safe writes
+- Settings drawer lets you test snapshot/write endpoints and headers; requires Authorization to save
+
 Authentication & authorization
 
 - Config users: PBKDF2 (SHA‑256) hashes; Basic/API‑Key/Bearer allowed
@@ -34,6 +89,7 @@ Secrets & keys
 - STRIPE_SECRET and STRIPE_WEBHOOK_SECRET exist only as Worker environment variables
 - ADMIN_TOKEN used to protect /admin/superadmin; rotate superadmin hash server‑side
 - Never commit secrets to repo; use Cloudflare dashboard (Secret) or wrangler secret put
+- Always set sensitive variables as Type: Secret in Cloudflare dashboard (not Plaintext)
 
 Client behavior & safety
 
@@ -41,6 +97,7 @@ Client behavior & safety
 - Public pages use /json/public.db.json for reads; authorized clients can read /json/db.json
 - All endpoints in view source are obfuscated (runtime decoded via atob); raw URLs never embedded
 - Donations: POST /donate via Worker; Dashboard top‑up uses server endpoint /wallet/topup (no client‑only Stripe)
+- Endpoints in clients are obfuscated via `atob(...)` runtime decoding; avoid embedding raw hostnames/paths
 
 Do’s & Don’ts
 
@@ -49,6 +106,7 @@ Do’s & Don’ts
 - Do store passwords as PBKDF2 hashes with salt/iterations; never plaintext
 - Don’t embed raw endpoints or credentials in HTML/JS
 - Don’t log request bodies, secrets, or usernames in console or Worker logs
+- Don’t publish `coreenginedb/database.html` publicly if it contains admin‑only tooling; host behind auth
 
 Operational notes
 
@@ -63,6 +121,7 @@ Troubleshooting
 - 412 precondition_failed: refresh ETag (HEAD /json/db.json) then retry write
 - 429 rate_limited: wait and retry; reduce login attempts
 - 501 stripe_not_configured: set STRIPE_SECRET as Worker Secret; verify prices or pass dynamic amount
+- 400 Stripe client‑only error: use server‑side `/wallet/topup` (already implemented) or enable client‑only Checkout in Stripe settings
 
 Change log highlights
 
@@ -70,6 +129,14 @@ Change log highlights
 - Obfuscated all Worker endpoints via runtime decoding; removed asset origins from client
 - Switched dashboard top‑up to Worker server flow; no client‑only Stripe
 - Added relative/friendly timestamps across UI
+- Added security checklist to Worker config and clients; secrets moved to dashboard as Secret types
+- Added private documentation to track features, endpoints, and guardrails
+
+Session handoff notes (AI assistants)
+
+- Latest updates: obfuscation added; Stripe server route live; timestamps rendered; admin fallback auth hardened
+- Worker env set: ADMIN_TOKEN, STRIPE_SECRET, STRIPE_WEBHOOK_SECRET (recommend Secret type)
+- When continuing work: read this doc first; never expose sensitive values; use sanitized endpoints for public reads; use Authorization + ETag for writes
 
 Review checklist (AI assistant)
 
