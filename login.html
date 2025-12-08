@@ -256,7 +256,7 @@ try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app 
 const AUTH_LOGIN_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9sb2dpbg==')
 async function tryLogin(username, password){
   try{
-    const r = await fetch(AUTH_LOGIN_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }) })
+    const r = await fetch(AUTH_LOGIN_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }), mode:'cors', credentials:'include' })
     const j = r.ok? await r.json(): null
     if(j && j.ok){
       sessionStorage.setItem('app_auth', JSON.stringify({ username }))
