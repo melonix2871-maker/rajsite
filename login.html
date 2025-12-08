@@ -253,44 +253,17 @@ function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_UR
 try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='admin.html' } else if(app){ window.location.href='index.html' } }catch(_){ }
 </script>
 <script>
+const AUTH_LOGIN_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9sb2dpbg==')
 async function tryLogin(username, password){
   try{
-    async function readRowsSafely(){
-      const urls=[WRITE_DB_URL, 'https://assets.antserver1.eu.org/db.json']
-      for(const u of urls){
-        try{ const r=await fetch(u, { cache:'no-store', mode:'cors', credentials:'omit' }); if(r.ok){ const t=await r.text(); try{ const j=JSON.parse(t); if(Array.isArray(j)) return j }catch(_){ } } }catch(_e){}
-      }
-      return []
-    }
-    const rows = await readRowsSafely()
-    if(!Array.isArray(rows) || !rows.length){ document.getElementById('status').textContent='❌ Cannot read users'; return }
-    const suRow = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && String(r.metakey||'')===String(username)) || null
-    if(suRow && String(suRow.metavalue||'')===String(password)){
-      sessionStorage.setItem('app_auth', JSON.stringify({ role:'superadmin', username }))
-      sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password)))
-      window.location.href='admin.html'
+    const r = await fetch(AUTH_LOGIN_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }) })
+    const j = r.ok? await r.json(): null
+    if(j && j.ok){
+      const role = (String(username)==='kwlasing_superadmin')? 'superadmin' : 'user'
+      sessionStorage.setItem('app_auth', JSON.stringify({ role, username }))
+      try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password))) }catch(_){ }
+      window.location.href = role==='superadmin'? 'admin.html' : 'index.html'
       return
-    }
-    const urec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='username' && String(r.metavalue||'')===String(username)) || null
-    if(urec){
-      const passrec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='password' && Number(r.relid||0)===Number(urec.relid||0)) || null
-      if(passrec){
-        let ok=false
-        try{
-          const payload = typeof passrec.metavalue==='string'? JSON.parse(passrec.metavalue) : passrec.metavalue
-          if(payload && payload.hash && payload.salt && payload.iterations){
-            const calc = await pbkdf2Hex(password, String(payload.salt), Number(payload.iterations||100000), 32)
-            ok = (String(calc) === String(payload.hash))
-          }
-        }catch(_){ ok=false }
-        if(!ok){ ok = (String(passrec.metavalue||'')===String(password)) }
-        if(ok){
-          sessionStorage.setItem('app_auth', JSON.stringify({ role:'user', username, relid:Number(urec.relid||0) }))
-          try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password))) }catch(_){ }
-          window.location.href='index.html'
-          return
-        }
-      }
     }
     document.getElementById('status').textContent='❌ Invalid credentials'
   }catch(e){ document.getElementById('status').textContent='❌ Login error' }
@@ -407,6 +380,7 @@ document.addEventListener('click', function(event) {
 });
 </script>
 <script>
+const AUTH_FORGOT_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9mb3Jnb3Q=')
 document.getElementById('forgot-form').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const u=document.getElementById('fp-username').value.trim();
@@ -414,7 +388,7 @@ document.getElementById('forgot-form').addEventListener('submit', async (e)=>{
   const np=document.getElementById('fp-password').value.trim();
   if(!u||!code||!np){ document.getElementById('forgot-status').textContent='Enter all fields'; return }
   try{
-    const r = await fetch('https://coreenginedb.meoasis2014.workers.dev/auth/forgot',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username:u, code, newPassword: np }) })
+    const r = await fetch(AUTH_FORGOT_URL,{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username:u, code, newPassword: np }) })
     const j = r.ok? await r.json() : null
     if(j && j.ok){ document.getElementById('forgot-status').textContent='✅ Password reset. Sign in.' } else { document.getElementById('forgot-status').textContent='❌ Reset failed' }
   }catch(_){ document.getElementById('forgot-status').textContent='❌ Reset error' }

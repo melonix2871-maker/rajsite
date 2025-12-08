@@ -33,6 +33,7 @@ export default {
     const isForgot = url.pathname === '/auth/forgot'
     const isWebhook = url.pathname === '/stripe/webhook'
     const isAdminSuper = url.pathname === '/admin/superadmin'
+    const isAuthLogin = url.pathname === '/auth/login'
     const isActivity = url.pathname === '/activity'
     const key = isCfg ? 'config.json' : ((isDb || isPublicDb) ? 'db.json' : '')
 
@@ -77,7 +78,7 @@ export default {
       }
     }
 
-    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && !isAdminSuper && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
+    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && !isAdminSuper && !isAuthLogin && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
 
     if (isWebhook && req.method === 'POST') {
       const body = await req.text()
@@ -420,6 +421,57 @@ export default {
       h.set('Content-Type','application/json')
       await logEvent('POST', url.pathname, 200, (pretty && pretty.length)||0, '', 'superadmin_set')
       return new Response('{"ok":true}', { status: 200, headers: h })
+    }
+    // Login verification endpoint (no secrets returned)
+    if (isAuthLogin && req.method === 'POST') {
+      try {
+        const body = await req.text()
+        let payload = {}
+        try { payload = JSON.parse(body || '{}') } catch (_e) { payload = {} }
+        const username = String(payload.username || '')
+        const password = String(payload.password || '')
+        if (!username || !password) { h.set('Content-Type','application/json'); await logEvent('POST','/auth/login',400,0,'','bad_request'); return new Response('{"error":"bad_request"}', { status: 400, headers: h }) }
+        const blocked = await rateLimitShouldBlock('login/'+username)
+        if (blocked) { h.set('Content-Type','application/json'); await logEvent('POST','/auth/login',429,0,username,'rate_limited'); return new Response('{"error":"rate_limited"}', { status: 429, headers: h }) }
+        let rows = []
+        try { rows = JSON.parse(await getText('db.json') || '[]') } catch (_e) { rows = [] }
+        let ok = false
+        // superadmin hashed
+        const superRec = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && Number(r.id||0)===1)
+        if (superRec) {
+          const rel = Number(superRec.relid||0)
+          const passRec = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && Number(r.relid||0)===rel && String(r.metakey||'')==='password_hash')
+          if (passRec) {
+            let salt='coreenginedb', iterations=100000, stored=''
+            try { const obj = JSON.parse(String(passRec.metavalue||'{}')); salt=String(obj.salt||salt); iterations=Number(obj.iterations||iterations); stored=String(obj.hash||'') } catch(_e){ stored=String(passRec.metavalue||'') }
+            if (stored) { const calc = await pbkdf2Hex(password, salt, iterations, 32); if (timingSafeEqual(calc, stored) && timingSafeEqual(String(superRec.metakey||''), username)) ok = true }
+          }
+        }
+        // general user hashed/plain
+        if (!ok) {
+          const urec = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && String(r.metakey||'')==='username' && String(r.metavalue||'')===username)
+          if (urec) {
+            const rel = Number(urec.relid||0)
+            const passHash = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && Number(r.relid||0)===rel && (String(r.metakey||'')==='password_hash'))
+            const passPlain = rows.find(r => String(r.prefix||'')==='app_' && String(r.collection||'')==='users' && Number(r.relid||0)===rel && (String(r.metakey||'')==='password'))
+            if (passHash) {
+              let salt='coreenginedb', iterations=100000, stored=''
+              try { const obj = JSON.parse(String(passHash.metavalue||'{}')); salt=String(obj.salt||salt); iterations=Number(obj.iterations||iterations); stored=String(obj.hash||'') } catch(_e){ stored=String(passHash.metavalue||'') }
+              if (stored) { const calc = await pbkdf2Hex(password, salt, iterations, 32); if (timingSafeEqual(calc, stored)) ok = true }
+            } else if (passPlain) {
+              if (timingSafeEqual(String(passPlain.metavalue||''), password)) ok = true
+            }
+          }
+        }
+        h.set('Content-Type','application/json')
+        if (ok) { await logEvent('POST','/auth/login',200,0,username,'login_ok'); return new Response('{"ok":true}', { status: 200, headers: h }) }
+        await logEvent('POST','/auth/login',401,0,username,'bad_credentials')
+        return new Response('{"error":"bad_credentials"}', { status: 401, headers: h })
+      } catch (_e) {
+        h.set('Content-Type','application/json')
+        await logEvent('POST','/auth/login',500,0,'','login_error')
+        return new Response('{"error":"login_error"}', { status: 500, headers: h })
+      }
     }
     if (tooLarge(req)) { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 413, 0, '', 'payload_too_large'); return new Response('{"error":"payload_too_large"}', { status: 413, headers: h }) }
 
