@@ -996,3 +996,49 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>CoreEngineDB • Admin</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:20px;background:#fafafa;color:#222}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    h1{margin:0;font-size:20px}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
+    .muted{opacity:.7}
+    .badge{display:inline-block;background:#111;color:#fff;border-radius:6px;padding:4px 8px;font-weight:600}
+    .toolbar{display:flex;gap:8px;align-items:center;margin:12px 0}
+  </style>
+</head>
+<body>
+  <header>
+    <img alt="CoreEngineDB" src="" style="width:24px;height:24px;border-radius:4px;background:#111"/>
+    <h1>CoreEngineDB Admin</h1>
+    <span id="auth-status" class="muted"></span>
+  </header>
+
+  <div id="panel" class="muted">Checking session…</div>
+
+  <script type="module">
+  const WORKER_CONFIG_URL=(function(){ try{ if(window.__REMOTE&&window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){ } return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
+  const WRITE_DB_URL=atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u')
+  const AUTH_SESSION_URL=atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9zZXNzaW9u')
+
+  async function requireSuperadmin(){ try{ const r=await fetch(AUTH_SESSION_URL,{ credentials:'include' }); const j=r.ok? await r.json():null; return !!(j && j.ok && String(j.role||'')==='superadmin') }catch(_){ return false } }
+
+  async function fetchRows(){ const r=await fetch(WRITE_DB_URL,{ cache:'no-store', credentials:'include' }); if(!r.ok) throw new Error('forbidden'); const et=r.headers.get('etag'); if(et) window.cedbEtag=et; return await r.json().catch(()=>[]) }
+
+  async function writeRows(rows){ const et=window.cedbEtag||''; const headers=Object.assign({ 'Content-Type':'application/json' }, et? { 'If-Match': et } : {}); const r=await fetch(WRITE_DB_URL,{ method:'PUT', headers, credentials:'include', body: JSON.stringify(rows,null,2) }); if(!r.ok) throw new Error(String(r.status)); const newEt=r.headers.get('etag'); if(newEt) window.cedbEtag=newEt }
+
+  function renderTable(rows){ const panel=document.getElementById('panel'); const safe=Array.isArray(rows)?rows:[]; const tbl=document.createElement('table'); const thead=document.createElement('thead'); const trh=document.createElement('tr'); ['ID','prefix','relid','collection','metakey','metavalue'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th) }); thead.appendChild(trh); tbl.appendChild(thead); const tbody=document.createElement('tbody'); safe.forEach(r=>{ const tr=document.createElement('tr'); const cols=[r.id, r.prefix, r.relid, r.collection, r.metakey, (typeof r.metavalue==='object'? JSON.stringify(r.metavalue) : String(r.metavalue||''))]; cols.forEach(c=>{ const td=document.createElement('td'); td.textContent=String(c||''); tr.appendChild(td) }); tbody.appendChild(tr) }); tbl.appendChild(tbody); panel.innerHTML=''; panel.appendChild(tbl) }
+
+  async function main(){ const ok=await requireSuperadmin(); const status=document.getElementById('auth-status'); if(!ok){ status.textContent='❌ Not authorized'; window.location.href='/login.html'; return } status.textContent='✅ Superadmin'; try{ const rows=await fetchRows(); renderTable(rows) }catch(_){ document.getElementById('panel').textContent='Forbidden or unavailable' } }
+
+  main()
+  </script>
+</body>
+</html>
