@@ -96,6 +96,12 @@ Sessions (cookie‑based)
 - Worker validates the cookie in `checkAuth()` before headers; clients don’t store credentials in web storage
 - Admin UI and protected routes rely on server auth; client role strings aren’t used for authorization
 
+Admin access policy
+
+- Only superadmin (id=1 in `coreenginedb_/superuser`) can access private `db.json` and full `config.json`
+- Server enforces `role==='superadmin'` on GET/HEAD/PUT `/json/db.json` and full config reads; others receive `403`
+- Admin pages (`admin.html`, `coreenginedb/database.html`) gate via `GET /auth/session` and require `role==='superadmin'`
+
 Secrets & keys
 
 - STRIPE_SECRET and STRIPE_WEBHOOK_SECRET exist only as Worker environment variables
