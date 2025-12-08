@@ -266,6 +266,7 @@ async function tryLogin(username, password){
         if(sj && sj.ok && sj.role) role = String(sj.role||'user')
       }catch(_){ }
       sessionStorage.setItem('app_auth', JSON.stringify({ username, role }))
+      try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password))) }catch(_){}
       if(role==='superadmin') window.location.href = 'coreenginedb/database.html'; else window.location.href = 'index.html'
       return
     }
