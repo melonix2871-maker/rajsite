@@ -101,6 +101,7 @@ Admin access policy
 - Only superadmin (id=1 in `coreenginedb_/superuser`) can access private `db.json` and full `config.json`
 - Server enforces `role==='superadmin'` on GET/HEAD/PUT `/json/db.json` and full config reads; others receive `403`
 - Admin pages (`admin.html`, `coreenginedb/database.html`) gate via `GET /auth/session` and require `role==='superadmin'`
+- `coreenginedb/database.html` uses cookie auth only (`credentials:'include'`) and never sends Authorization headers or falls back to external assets. On failed session, it redirects to `login.html` and does not render data.
 
 Secrets & keys
 
