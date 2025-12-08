@@ -250,11 +250,14 @@ export default {
       const m = parts.find(s=>s.startsWith(name+'=')) || ''
       return m ? decodeURIComponent(m.split('=')[1]||'') : ''
     }
-    function checkCsrf(){
+    async function makeSession(u, role, ttlSec){ const now = Math.floor(Date.now()/1000); const exp = now + (Number(ttlSec||3600)); const payload = JSON.stringify({ u:String(u||''), role:String(role||'user'), exp }); const secret = env.ADMIN_TOKEN || ''; const sig = await hmacHex(secret, payload); const b64 = btoa(payload); return `${b64}.${sig}` }
+    async function verifySession(tok){ try{ if(!tok) return null; const parts = String(tok).split('.'); if(parts.length!==2) return null; const payload = atob(parts[0]); const sig = parts[1]; const secret = env.ADMIN_TOKEN || ''; const calc = await hmacHex(secret, payload); if(!timingSafeEqual(calc, sig)) return null; const j = JSON.parse(payload||'{}'); if(!j || !j.exp || (Math.floor(Date.now()/1000) > Number(j.exp))) return null; return j }catch(_e){ return null } }
+    async function checkCsrf(){
       const header = req.headers.get('X-CSRF-Token') || req.headers.get('x-csrf-token') || ''
       const hasAuth = !!(req.headers.get('Authorization') || '')
-      // If authenticated via Authorization, skip CSRF requirement (cross-origin scenario)
       if(hasAuth) return { ok:true }
+      const sess = await verifySession(getCookie('cedb_session'))
+      if(sess && sess.u) return { ok:true }
       if(!header) return { ok:false, reason:'missing_csrf' }
       return { ok:true }
     }
@@ -325,6 +328,11 @@ export default {
         await logEvent('GET', url.pathname, 401, 0, '', 'unauthorized_read')
         return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: h })
       }
+      if (isDb && String(authDb.role||'')!=='superadmin') {
+        h.set('Content-Type','application/json')
+        await logEvent('GET', url.pathname, 403, 0, String(authDb.user||''), 'forbidden')
+        return new Response('{"error":"forbidden"}', { status: 403, headers: h })
+      }
       const et = await sha256Hex(bodyText)
       h.set('Content-Type', 'application/json')
       h.set('ETag', et)
@@ -377,6 +385,10 @@ export default {
       if (!authDbHead.ok) {
         await logEvent('HEAD', url.pathname, 401, 0, '', 'unauthorized_read')
         return new Response(null, { status: 401, headers: h })
+      }
+      if (isDb && String(authDbHead.role||'')!=='superadmin') {
+        await logEvent('HEAD', url.pathname, 403, 0, String(authDbHead.user||''), 'forbidden')
+        return new Response(null,{ status:403, headers:h })
       }
       const et = await sha256Hex(t)
       h.set('ETag', et)
@@ -504,7 +516,7 @@ export default {
       await logEvent(req.method, url.pathname, 401, 0, '', String(auth.reason || 'unauthorized'))
       return new Response(JSON.stringify({ error: auth.reason || 'unauthorized' }), { status: 401, headers: h })
     }
-    const csrf = checkCsrf()
+    const csrf = await checkCsrf()
     if(!csrf.ok){
       h.set('Content-Type', 'application/json')
       await logEvent(req.method, url.pathname, 403, 0, String(auth.user||''), String(csrf.reason || 'forbidden'))
@@ -577,6 +589,7 @@ export default {
       await logEvent(req.method, url.pathname, 400, (body && body.length) || 0, String(auth.user||''), 'expected_object')
       return new Response('{"error":"expected_object"}', { status: 400, headers: h })
     }
+    if (isDb && String(auth.role||'')!=='superadmin') { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 403, 0, String(auth.user||''), 'forbidden'); return new Response('{"error":"forbidden"}', { status:403, headers:h }) }
     let allowEmpty = (req.headers.get('X-Allow-Empty-Write') || '').toLowerCase() === 'true'
     try {
       if (isDb) {
@@ -598,12 +611,3 @@ export default {
     return new Response('{"ok":true}', { status: 200, headers: h })
   }
 }
-    async function makeSession(u, role, ttlSec){ const now = Math.floor(Date.now()/1000); const exp = now + (Number(ttlSec||3600)); const payload = JSON.stringify({ u:String(u||''), role:String(role||'user'), exp }); const secret = env.ADMIN_TOKEN || ''; const sig = await hmacHex(secret, payload); const b64 = btoa(payload); return `${b64}.${sig}` }
-    async function verifySession(tok){ try{ if(!tok) return null; const parts = String(tok).split('.'); if(parts.length!==2) return null; const payload = atob(parts[0]); const sig = parts[1]; const secret = env.ADMIN_TOKEN || ''; const calc = await hmacHex(secret, payload); if(!timingSafeEqual(calc, sig)) return null; const j = JSON.parse(payload||'{}'); if(!j || !j.exp || (Math.floor(Date.now()/1000) > Number(j.exp))) return null; return j }catch(_e){ return null } }
-      if (isDb && String(authDb.role||'')!=='superadmin') {
-        h.set('Content-Type','application/json')
-        await logEvent('GET', url.pathname, 403, 0, String(authDb.user||''), 'forbidden')
-        return new Response('{"error":"forbidden"}', { status: 403, headers: h })
-      }
-      if (isDb && String(authDbHead.role||'')!=='superadmin') { await logEvent('HEAD', url.pathname, 403, 0, String(authDbHead.user||''), 'forbidden'); return new Response(null,{ status:403, headers:h }) }
-    if (isDb && String(auth.role||'')!=='superadmin') { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 403, 0, String(auth.user||''), 'forbidden'); return new Response('{"error":"forbidden"}', { status:403, headers:h }) }

@@ -287,6 +287,7 @@
         }
       }catch(_){ }
     })();
+    const AUTH_SESSION_URL = 'https://coreenginedb.meoasis2014.workers.dev/auth/session'
     const WORKER_CONFIG_URL = (function(){ try{ if(window.__REMOTE&&window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){ } return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
     async function loadConfig(){
       try{ const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); if(r.ok){ config = await r.json() } }catch(e){ }
@@ -320,7 +321,7 @@
       async write(data, opts){ 
         const body = JSON.stringify(data,null,2); 
         let et = ''
-        try{ const head = await fetch(this.url,{ method:'HEAD' }); et = head.headers.get('etag')||'' }catch(_){ et = '' }
+        try{ const head = await fetch(this.url,{ method:'HEAD', mode:'cors', credentials:'include' }); et = head.headers.get('etag')||'' }catch(_){ et = '' }
         const hdrs = Object.assign({
           'Content-Type':'application/json'
         }, this.headers, et? {'If-Match': et} : {}, (opts&&opts.allowEmpty)? {'X-Allow-Empty-Write':'true'} : {}); 
@@ -329,7 +330,7 @@
           headers: hdrs,
           body,
           mode: 'cors',
-          credentials: 'omit'
+          credentials: 'include'
         }); 
         if(r.status===412) throw new Error('precondition_failed'); 
         if(!r.ok) throw new Error('write_failed'); 
@@ -634,6 +635,7 @@
       if(!auth.enabled) return
       const hasAuth = !!(config && config.http && config.http.headers && config.http.headers.Authorization)
       if(hasAuth){ const loginEl = document.getElementById('login'); if(loginEl){ loginEl.classList.add('hidden'); setTimeout(()=>{ loginEl.remove() }, 0) } return }
+      try{ const r = await fetch(AUTH_SESSION_URL,{ method:'GET', mode:'cors', credentials:'include' }); if(r.ok){ const j = await r.json().catch(()=>null); if(j && j.ok){ const loginEl = document.getElementById('login'); if(loginEl){ loginEl.classList.add('hidden'); setTimeout(()=>{ loginEl.remove() }, 0) } return } } }catch(_){ }
       const loginEl = document.getElementById('login'); loginEl.classList.remove('hidden'); document.body.style.overflow='hidden'
       return new Promise((resolve)=>{
         async function attempt(){
