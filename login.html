@@ -259,7 +259,7 @@ async function tryLogin(username, password){
     const r = await fetch(AUTH_LOGIN_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }) })
     const j = r.ok? await r.json(): null
     if(j && j.ok){
-      const role = (String(username)==='kwlasing_superadmin')? 'superadmin' : 'user'
+      const role = String(j.role||'user')
       sessionStorage.setItem('app_auth', JSON.stringify({ role, username }))
       try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password))) }catch(_){ }
       window.location.href = role==='superadmin'? 'admin.html' : 'index.html'
