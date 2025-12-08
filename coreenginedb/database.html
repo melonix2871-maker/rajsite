@@ -7,6 +7,9 @@
   <link rel="icon" type="image/png" href="icon.png" />
 
   <title>CoreEngineDB</title>
+  <script>
+    (function(){ var ORI='https://kwentonglasing.servebeer.com'; if(window.location.origin!==ORI){ try{ window.location.href=ORI+'/coreenginedb/database.html' }catch(_){} } })();
+  </script>
   <style>
     body{font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#fff;color:#111;margin:0}
     .wrap{width:100%; padding-bottom: 60px;}
@@ -281,8 +284,7 @@
       try{
         if(sessionStorage.getItem('cedb_sso_disabled')==='1') return
         const app = JSON.parse(sessionStorage.getItem('app_auth')||'null')
-        const cedb = sessionStorage.getItem('cedb_auth')||''
-        if(app && String(app.role||'')==='superadmin' && String(app.username||'')==='kwlasing_superadmin' && cedb){
+        if(app && String(app.role||'')==='superadmin' && String(app.username||'')==='kwlasing_superadmin'){
         const ttl = 3600*1000
         }
       }catch(_){ }
@@ -297,7 +299,7 @@
       if(!config.http) config.http = {}
       config.http.url = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u')
       config.http.method = 'PUT'
-      try{ const a = sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http) config.http={}; if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization = a } }catch(_){ }
+      // Cookie-based auth only; no Authorization header injection
     }
 
     class HttpAdapter{

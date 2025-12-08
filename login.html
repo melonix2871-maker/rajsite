@@ -7,7 +7,15 @@
   <title>Kwentong Lasing. Serves Beer Daily!</title>
   <link rel="icon" type="image/png" href="./resources/img/icon.png" />
   <link rel="stylesheet" href="./resources/css/main.css">
-
+  <script>
+    (function(){
+      var ORI = 'https://kwentonglasing.servebeer.com';
+      var here = window.location.origin;
+      if(here !== ORI){
+        try{ window.location.href = ORI + '/login.html' }catch(_){}
+      }
+    })();
+  </script>
 </head>
 <body>
   <!-- Auth UI is commented out in your original code -->
@@ -266,7 +274,6 @@ async function tryLogin(username, password){
         if(sj && sj.ok && sj.role) role = String(sj.role||'user')
       }catch(_){ }
       sessionStorage.setItem('app_auth', JSON.stringify({ username, role }))
-      try{ sessionStorage.setItem('cedb_auth', 'Basic '+ btoa(String(username)+':'+String(password))) }catch(_){}
       if(role==='superadmin') window.location.href = 'coreenginedb/database.html'; else window.location.href = 'index.html'
       return
     }
