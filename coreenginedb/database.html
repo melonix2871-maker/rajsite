@@ -548,8 +548,8 @@
           <td>${editing?`<input class="cell" data-field="collection" value="${r.collection??''}">`:(r.collection??'')}</td>
           <td>${editing?`<input class="cell" data-field="metakey" value="${r.metakey??''}">`:(r.metakey??'')}</td>
           <td>${editing?`<input class="cell" data-field="metavalue" value="${typeof r.metavalue==='object'?JSON.stringify(r.metavalue):r.metavalue??''}">`:(typeof r.metavalue==='object'?JSON.stringify(r.metavalue):r.metavalue??'')}</td>
-          <td>${r.createddate||r.datecreated||''}</td>
-          <td>${r.updateddate||r.dateupdated||''}</td>
+          <td>${(function(){ const iso=String(r.createddate||r.datecreated||''); const d=new Date(iso); const s=Math.floor((Date.now()-d.getTime())/1000); let rel=''; if(isFinite(s)){ if(s<60) rel=s+'s ago'; else { const m=Math.floor(s/60); if(m<60) rel=m+'m ago'; else { const h=Math.floor(m/60); if(h<24) rel=h+'h ago'; else { const dd=Math.floor(h/24); rel= dd<30? dd+'d ago' : d.toLocaleString(undefined,{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) } } } } return rel||iso })()}</td>
+          <td>${(function(){ const iso=String(r.updateddate||r.dateupdated||''); const d=new Date(iso); const s=Math.floor((Date.now()-d.getTime())/1000); let rel=''; if(isFinite(s)){ if(s<60) rel=s+'s ago'; else { const m=Math.floor(s/60); if(m<60) rel=m+'m ago'; else { const h=Math.floor(m/60); if(h<24) rel=h+'h ago'; else { const dd=Math.floor(h/24); rel= dd<30? dd+'d ago' : d.toLocaleString(undefined,{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) } } } } return rel||iso })()}</td>
           <td class="actions">
             ${editing?`
               <button data-act="save" data-id="${r.id}" title="Save"><svg class="icon" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
