@@ -64,7 +64,7 @@ export default {
             const r = await env.COREENGINEDB.get(obj.key)
             const t = r ? await r.text() : ''
             const j = t ? JSON.parse(t) : null
-            if (j) out.push(j)
+            if (j) { if ('user' in j) j.user = ''; out.push(j) }
           } catch (_e) { /* skip */ }
         }
         out.sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')))
@@ -436,6 +436,7 @@ export default {
         let rows = []
         try { rows = JSON.parse(await getText('db.json') || '[]') } catch (_e) { rows = [] }
         let ok = false
+        let role = 'user'
         // superadmin hashed
         const superRec = rows.find(r => String(r.prefix||'')==='coreenginedb_' && String(r.collection||'')==='superuser' && Number(r.id||0)===1)
         if (superRec) {
@@ -444,7 +445,7 @@ export default {
           if (passRec) {
             let salt='coreenginedb', iterations=100000, stored=''
             try { const obj = JSON.parse(String(passRec.metavalue||'{}')); salt=String(obj.salt||salt); iterations=Number(obj.iterations||iterations); stored=String(obj.hash||'') } catch(_e){ stored=String(passRec.metavalue||'') }
-            if (stored) { const calc = await pbkdf2Hex(password, salt, iterations, 32); if (timingSafeEqual(calc, stored) && timingSafeEqual(String(superRec.metakey||''), username)) ok = true }
+            if (stored) { const calc = await pbkdf2Hex(password, salt, iterations, 32); if (timingSafeEqual(calc, stored) && timingSafeEqual(String(superRec.metakey||''), username)) { ok = true; role = 'superadmin' } }
           }
         }
         // general user hashed/plain
@@ -464,7 +465,7 @@ export default {
           }
         }
         h.set('Content-Type','application/json')
-        if (ok) { await logEvent('POST','/auth/login',200,0,username,'login_ok'); return new Response('{"ok":true}', { status: 200, headers: h }) }
+        if (ok) { await logEvent('POST','/auth/login',200,0,username,'login_ok'); return new Response(JSON.stringify({ ok:true, role }), { status: 200, headers: h }) }
         await logEvent('POST','/auth/login',401,0,username,'bad_credentials')
         return new Response('{"error":"bad_credentials"}', { status: 401, headers: h })
       } catch (_e) {

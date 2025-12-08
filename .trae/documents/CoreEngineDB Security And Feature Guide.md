@@ -28,6 +28,8 @@ Endpoints (Worker)
 - POST /wallet/topup: creates Stripe Checkout session using STRIPE_SECRET; returns url
 - POST /stripe/webhook: verifies events using STRIPE_WEBHOOK_SECRET and updates wallet
 - GET /activity: lists worker activity logs by day
+- POST /auth/login: verifies credentials server‑side (PBKDF2 or legacy plaintext), returns { ok:true } only; no user data leaked
+- POST /auth/forgot: resets user password via Worker; requires username + recovery code
 
 CRUD usage (client)
 
@@ -98,6 +100,8 @@ Client behavior & safety
 - All endpoints in view source are obfuscated (runtime decoded via atob); raw URLs never embedded
 - Donations: POST /donate via Worker; Dashboard top‑up uses server endpoint /wallet/topup (no client‑only Stripe)
 - Endpoints in clients are obfuscated via `atob(...)` runtime decoding; avoid embedding raw hostnames/paths
+- Login uses obfuscated `AUTH_LOGIN_URL` pointing to `/auth/login`; no client‑side reads of db.json; no external asset fallbacks
+- Forgot password uses obfuscated `AUTH_FORGOT_URL` pointing to `/auth/forgot`
 
 Do’s & Don’ts
 
@@ -131,6 +135,15 @@ Change log highlights
 - Added relative/friendly timestamps across UI
 - Added security checklist to Worker config and clients; secrets moved to dashboard as Secret types
 - Added private documentation to track features, endpoints, and guardrails
+- Added `/auth/login` in Worker and migrated `login.html` to server‑verified auth with obfuscated constants; removed asset db fallback
+
+Code touchpoints (for assistants)
+
+- `cloudflare/worker.js`: activity logger, sanitized config/public snapshot, ETag/CSRF/authorization, Stripe top‑up/webhook, `/auth/login` endpoint (server‑side credential verification)
+- `index.html`: obfuscated `WORKER_CONFIG_URL`, `SNAPSHOT_URL`, `WRITE_DB_URL`, `DONATE_URL` via `atob(...)`; feed renderer with donation counts; relative timestamps
+- `profile.html`: obfuscated URLs; post rendering with donation totals and relative timestamps; donation POST via obfuscated endpoint
+- `dashboard.html`: obfuscated URLs; avatar save (client resize), wallet ledger with relative timestamps, top‑up via server endpoint
+- `login.html`: obfuscated `AUTH_LOGIN_URL`, `AUTH_FORGOT_URL`; posts to Worker; sets `sessionStorage.app_auth` and `sessionStorage.cedb_auth` on success; no external asset db fallback
 
 Session handoff notes (AI assistants)
 
