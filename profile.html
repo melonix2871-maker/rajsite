@@ -64,6 +64,9 @@ function q(name){
 let config = {}
 
 const WORKER_CONFIG_URL=(function(){ try{ if(window.__REMOTE&&window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
+const SNAPSHOT_URL=atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9wdWJsaWMuZGIuanNvbg==')
+const WRITE_DB_URL=atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u')
+const DONATE_URL=atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvZG9uYXRl')
 async function loadConfig(){ 
   try{ 
     const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); 
@@ -71,10 +74,10 @@ async function loadConfig(){
   }catch(_){ }
   
   if(!config.defaultPrefix) config.defaultPrefix = 'app_'; 
-  config.snapshotUrl = 'https://coreenginedb.meoasis2014.workers.dev/json/public.db.json';
+  config.snapshotUrl = SNAPSHOT_URL;
   
   if(!config.http) config.http = {}; 
-  config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json';
+  config.http.url = WRITE_DB_URL;
   config.http.method = 'PUT';
   
   try{ 
@@ -266,7 +269,7 @@ async function main(){
       const amt = kind === 'bottle' ? 5 : (kind === 'bucket' ? 30 : 60);
       
       try{
-        const r = await fetch('https://coreenginedb.meoasis2014.workers.dev/donate', {
+        const r = await fetch(DONATE_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
