@@ -32,6 +32,7 @@ export default {
     const isDonate = url.pathname === '/donate'
     const isForgot = url.pathname === '/auth/forgot'
     const isWebhook = url.pathname === '/stripe/webhook'
+    const isAdminSuper = url.pathname === '/admin/superadmin'
     const isActivity = url.pathname === '/activity'
     const key = isCfg ? 'config.json' : ((isDb || isPublicDb) ? 'db.json' : '')
 
@@ -76,7 +77,7 @@ export default {
       }
     }
 
-    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
+    if (!isCfg && !isDb && !isPublicDb && !isTopup && !isDonate && !isForgot && !isWebhook && !isAdminSuper && url.pathname !== '/journal' && url.pathname !== '/compact' && url.pathname !== '/activity') { await logEvent(req.method, url.pathname, 404, 0, '', 'not_found'); return new Response('', { status: 404, headers: h }) }
 
     if (isWebhook && req.method === 'POST') {
       const body = await req.text()
@@ -175,6 +176,35 @@ export default {
           return { ok: false, reason: 'bad_credentials' }
         }
       }
+      // Fallback: authorize against db.json superadmin based on record id=1
+      try {
+        let rows = []
+        try { rows = JSON.parse(await getText('db.json') || '[]') } catch (_e) { rows = [] }
+        const firstUser = rows.find(r => Number(r.id||0) === 1 && String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && String(r.metakey||'') === 'username')
+        if (firstUser) {
+          const rel = Number(firstUser.relid || 0)
+          const passRec = rows.find(r => String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && Number(r.relid||0) === rel && String(r.metakey||'') === 'password_hash')
+          if (passRec) {
+            let salt = 'coreenginedb'
+            let iterations = 100000
+            let stored = ''
+            try {
+              const obj = JSON.parse(String(passRec.metavalue||'{}'))
+              salt = String(obj.salt||salt)
+              iterations = Number(obj.iterations||iterations)
+              stored = String(obj.hash||'')
+            } catch (_e) {
+              stored = String(passRec.metavalue||'')
+            }
+            if (stored) {
+              const calc = await pbkdf2Hex(password, salt, iterations, 32)
+              if (timingSafeEqual(calc, stored) && String(firstUser.metavalue||'') === String(username)) {
+                return { ok: true, user: username }
+              }
+            }
+          }
+        }
+      } catch (_e) {}
       // No fallback credentials; must match configured users
       return { ok: false, reason: 'bad_credentials' }
     }
@@ -320,6 +350,41 @@ export default {
       return new Response(null, { status: 200, headers: h })
     }
     if (req.method !== 'PUT' && req.method !== 'POST' && req.method !== 'PATCH') return new Response('', { status: 405, headers: h })
+
+    // Admin-only endpoint to set/rotate superadmin password hash in db.json
+    if (isAdminSuper && req.method === 'POST') {
+      const adminToken = req.headers.get('X-Admin-Token') || ''
+      if (!adminToken || adminToken !== (env.ADMIN_TOKEN || '')) {
+        h.set('Content-Type','application/json')
+        await logEvent('POST', url.pathname, 403, 0, '', 'forbidden')
+        return new Response('{"error":"forbidden"}', { status: 403, headers: h })
+      }
+      const body = await req.text()
+      let payload = {}
+      try { payload = JSON.parse(body || '{}') } catch (_e) { payload = {} }
+      const password = String(payload.password || '')
+      if (!password) { h.set('Content-Type','application/json'); await logEvent('POST', url.pathname, 400, 0, '', 'bad_request'); return new Response('{"error":"bad_request"}', { status: 400, headers: h }) }
+      let rows
+      try { rows = JSON.parse(await getText('db.json') || '[]') } catch (_e) { rows = [] }
+      const firstUser = rows.find(r => Number(r.id||0) === 1 && String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && String(r.metakey||'') === 'username')
+      if (!firstUser) { h.set('Content-Type','application/json'); await logEvent('POST', url.pathname, 404, 0, '', 'user_not_found'); return new Response('{"error":"user_not_found"}', { status: 404, headers: h }) }
+      const rel = Number(firstUser.relid || 0)
+      const salt = 'coreenginedb'
+      const iterations = 100000
+      const hash = await pbkdf2Hex(password, salt, iterations, 32)
+      const now = new Date().toISOString()
+      let passRec = rows.find(r => String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && Number(r.relid||0) === rel && String(r.metakey||'') === 'password_hash')
+      const value = JSON.stringify({ salt, iterations, hash })
+      if (passRec) { passRec.metavalue = value; passRec.updateddate = now }
+      else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'app_', collection:'users', metakey:'password_hash', metavalue: value, createddate: now, updateddate: now }) }
+      const pretty = JSON.stringify(rows, null, 2)
+      await putText('db.json', pretty)
+      const newEt = await sha256Hex(pretty)
+      h.set('ETag', newEt)
+      h.set('Content-Type','application/json')
+      await logEvent('POST', url.pathname, 200, (pretty && pretty.length)||0, '', 'superadmin_set')
+      return new Response('{"ok":true}', { status: 200, headers: h })
+    }
     if (tooLarge(req)) { h.set('Content-Type','application/json'); await logEvent(req.method, url.pathname, 413, 0, '', 'payload_too_large'); return new Response('{"error":"payload_too_large"}', { status: 413, headers: h }) }
 
     const auth = await checkAuth()
