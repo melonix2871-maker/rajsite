@@ -204,7 +204,33 @@ export default {
             }
           }
         }
+        const superRec = rows.find(r => Number(r.id||0) === 1 && String(r.prefix||'') === 'coreenginedb_' && String(r.collection||'') === 'superuser')
+        if (superRec) {
+          const rel = Number(superRec.relid || 0)
+          const passRec = rows.find(r => String(r.prefix||'') === 'coreenginedb_' && String(r.collection||'') === 'superuser' && Number(r.relid||0) === rel && String(r.metakey||'') === 'password_hash')
+          if (passRec) {
+            let salt = 'coreenginedb'
+            let iterations = 100000
+            let stored = ''
+            try {
+              const obj = JSON.parse(String(passRec.metavalue||'{}'))
+              salt = String(obj.salt||salt)
+              iterations = Number(obj.iterations||iterations)
+              stored = String(obj.hash||'')
+            } catch (_e) {
+              stored = String(passRec.metavalue||'')
+            }
+            if (stored) {
+              const calc = await pbkdf2Hex(password, salt, iterations, 32)
+              const expectedUser = String(superRec.metakey||'')
+              if (timingSafeEqual(calc, stored) && timingSafeEqual(String(username||''), expectedUser)) {
+                return { ok: true, user: username }
+              }
+            }
+          }
+        }
       } catch (_e) {}
+      try { const candidate = parseBasic().user || ''; const blocked = await rateLimitShouldBlock('login/'+(candidate||'anon')); if (blocked) return { ok:false, reason:'rate_limited' } } catch (_e) {}
       // No fallback credentials; must match configured users
       return { ok: false, reason: 'bad_credentials' }
     }
@@ -366,17 +392,27 @@ export default {
       if (!password) { h.set('Content-Type','application/json'); await logEvent('POST', url.pathname, 400, 0, '', 'bad_request'); return new Response('{"error":"bad_request"}', { status: 400, headers: h }) }
       let rows
       try { rows = JSON.parse(await getText('db.json') || '[]') } catch (_e) { rows = [] }
-      const firstUser = rows.find(r => Number(r.id||0) === 1 && String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && String(r.metakey||'') === 'username')
-      if (!firstUser) { h.set('Content-Type','application/json'); await logEvent('POST', url.pathname, 404, 0, '', 'user_not_found'); return new Response('{"error":"user_not_found"}', { status: 404, headers: h }) }
-      const rel = Number(firstUser.relid || 0)
       const salt = 'coreenginedb'
       const iterations = 100000
       const hash = await pbkdf2Hex(password, salt, iterations, 32)
       const now = new Date().toISOString()
-      let passRec = rows.find(r => String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && Number(r.relid||0) === rel && String(r.metakey||'') === 'password_hash')
-      const value = JSON.stringify({ salt, iterations, hash })
-      if (passRec) { passRec.metavalue = value; passRec.updateddate = now }
-      else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'app_', collection:'users', metakey:'password_hash', metavalue: value, createddate: now, updateddate: now }) }
+      const superRec = rows.find(r => Number(r.id||0) === 1 && String(r.prefix||'') === 'coreenginedb_' && String(r.collection||'') === 'superuser')
+      if (superRec) {
+        const rel = Number(superRec.relid || 0)
+        let passCore = rows.find(r => String(r.prefix||'') === 'coreenginedb_' && String(r.collection||'') === 'superuser' && Number(r.relid||0) === rel && String(r.metakey||'') === 'password_hash')
+        const value = JSON.stringify({ salt, iterations, hash })
+        if (passCore) { passCore.metavalue = value; passCore.updateddate = now }
+        else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'coreenginedb_', collection:'superuser', metakey:'password_hash', metavalue: value, createddate: now, updateddate: now }) }
+        try { superRec.metavalue = ''; superRec.updateddate = now } catch (_e) {}
+      } else {
+        const firstUser = rows.find(r => Number(r.id||0) === 1 && String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && String(r.metakey||'') === 'username')
+        if (!firstUser) { h.set('Content-Type','application/json'); await logEvent('POST', url.pathname, 404, 0, '', 'user_not_found'); return new Response('{"error":"user_not_found"}', { status: 404, headers: h }) }
+        const rel = Number(firstUser.relid || 0)
+        let passRec = rows.find(r => String(r.prefix||'') === 'app_' && String(r.collection||'') === 'users' && Number(r.relid||0) === rel && String(r.metakey||'') === 'password_hash')
+        const value = JSON.stringify({ salt, iterations, hash })
+        if (passRec) { passRec.metavalue = value; passRec.updateddate = now }
+        else { rows.push({ id: crypto.randomUUID(), relid: rel, prefix:'app_', collection:'users', metakey:'password_hash', metavalue: value, createddate: now, updateddate: now }) }
+      }
       const pretty = JSON.stringify(rows, null, 2)
       await putText('db.json', pretty)
       const newEt = await sha256Hex(pretty)
