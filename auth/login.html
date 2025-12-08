@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Login</title>
+  <link rel="stylesheet" href="../resources/css/main.css">
+  <script>
+    (function(){ var ORI='https://kwentonglasing.servebeer.com'; if(window.location.origin!==ORI){ try{ window.location.href=ORI+'/auth/login.html' }catch(_){} } })();
+  </script>
+</head>
+<body>
+  <div style="max-width:420px;margin:40px auto;padding:20px">
+    <h1>Login</h1>
+    <div id="status" style="margin-bottom:10px"></div>
+    <form id="login-form">
+      <label>Username <input id="login-username" autocomplete="username"></label>
+      <label>Password <input id="login-password" type="password" autocomplete="current-password"></label>
+      <button type="submit">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    const WORKER_BASE = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXY=')
+    function makeAuthUrl(path){ return String(WORKER_BASE).replace(/\/$/,'') + '/auth/' + (path||'login') }
+    async function tryLogin(username, password){
+      try{
+        const r = await fetch(makeAuthUrl('login'), { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }), mode:'cors', credentials:'include' })
+        const j = r.ok? await r.json(): null
+        if(!r.ok){ document.getElementById('status').textContent='❌ Invalid credentials'; return }
+        let role='user'
+        try{ const sr = await fetch(makeAuthUrl('session'), { method:'GET', mode:'cors', credentials:'include' }); const sj = sr.ok? await sr.json(): null; if(sj && sj.ok && sj.role) role=String(sj.role||'user') }catch(_){}
+        sessionStorage.setItem('app_auth', JSON.stringify({ username, role }))
+        if(role==='superadmin') window.location.href = '../coreenginedb/database.html'; else window.location.href = '../index.html'
+      }catch(e){ document.getElementById('status').textContent='❌ Login error' }
+    }
+    document.getElementById('login-form').addEventListener('submit', (e)=>{ e.preventDefault(); const u=document.getElementById('login-username').value.trim(); const p=document.getElementById('login-password').value.trim(); if(!u||!p){ document.getElementById('status').textContent='Enter username and password'; return } tryLogin(u,p) })
+  </script>
+</body>
+</html>
