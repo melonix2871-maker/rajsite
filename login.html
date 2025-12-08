@@ -261,15 +261,28 @@ function getCoreUrls(){ return { configUrl: WRITE_CONFIG_URL, dbUrl: WRITE_DB_UR
 try{ const app = JSON.parse(sessionStorage.getItem('app_auth')||'null'); if(app && String(app.role||'')==='superadmin'){ window.location.href='coreenginedb/database.html' } else if(app){ window.location.href='index.html' } }catch(_){ }
 </script>
 <script>
-const AUTH_LOGIN_URL = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvYXV0aC9sb2dpbg==')
+const AUTH_BASES = [
+  atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXY='),
+  atob('aHR0cHM6Ly9rd2VudG9uZ2xhc2luZy5zZXJ2ZWJlZXIuY29t'),
+  atob('aHR0cHM6Ly9hc3NldHMuYW50c2VydmVyMS5ldS5vcmc=')
+]
+function makeAuthUrl(base, path){ return String(base).replace(/\/$/,'') + '/auth/' + (path||'login') }
 async function tryLogin(username, password){
   try{
-    const r = await fetch(AUTH_LOGIN_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }), mode:'cors', credentials:'include' })
-    const j = r.ok? await r.json(): null
+    let j=null, ok=false, usedBase=''
+    for(const base of AUTH_BASES){
+      const url = makeAuthUrl(base,'login')
+      try{
+        const r = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username, password }), mode:'cors', credentials:'include' })
+        if(r.ok){ j = await r.json().catch(()=>null); usedBase = base; ok=true; break }
+        // 404/405 → try next base
+      }catch(_){ }
+    }
+    if(!ok){ document.getElementById('status').textContent='❌ Invalid credentials'; return }
     if(j && j.ok){
       let role = 'user'
       try{
-        const sr = await fetch(AUTH_LOGIN_URL.replace('/auth/login','/auth/session'), { method:'GET', mode:'cors', credentials:'include' })
+        const sr = await fetch(makeAuthUrl(usedBase,'session'), { method:'GET', mode:'cors', credentials:'include' })
         const sj = sr.ok? await sr.json(): null
         if(sj && sj.ok && sj.role) role = String(sj.role||'user')
       }catch(_){ }
