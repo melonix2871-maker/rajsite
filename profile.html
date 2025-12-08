@@ -63,11 +63,12 @@ function q(name){
 
 let config = {}
 
+const WORKER_CONFIG_URL=(function(){ try{ if(window.__REMOTE&&window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){} return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
 async function loadConfig(){ 
   try{ 
-    const r = await fetch('https://assets.antserver1.eu.org/config.json'); 
+    const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); 
     if(r.ok) config = await r.json() 
-  }catch(_){}
+  }catch(_){ }
   
   if(!config.defaultPrefix) config.defaultPrefix = 'app_'; 
   config.snapshotUrl = 'https://coreenginedb.meoasis2014.workers.dev/json/public.db.json';

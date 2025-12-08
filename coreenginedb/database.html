@@ -287,19 +287,20 @@
         }
       }catch(_){ }
     })();
+    const WORKER_CONFIG_URL = (function(){ try{ if(window.__REMOTE&&window.__REMOTE.configUrl) return String(window.__REMOTE.configUrl) }catch(_){ } return atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9jb25maWcuanNvbg==') })()
     async function loadConfig(){
-      try{ const r = await fetch('https://assets.antserver1.eu.org/config.json'); if(r.ok){ config = await r.json() } }catch(e){ }
+      try{ const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); if(r.ok){ config = await r.json() } }catch(e){ }
       if(!config.defaultPrefix) config.defaultPrefix = 'app_'
       config.adapter = 'http'
-      config.snapshotUrl = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
+      config.snapshotUrl = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u')
       if(!config.http) config.http = {}
-      config.http.url = 'https://coreenginedb.meoasis2014.workers.dev/json/db.json'
+      config.http.url = atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u')
       config.http.method = 'PUT'
       try{ const a = sessionStorage.getItem('cedb_auth')||''; if(a){ if(!config.http) config.http={}; if(!config.http.headers) config.http.headers={}; config.http.headers.Authorization = a } }catch(_){ }
     }
 
     class HttpAdapter{
-      constructor(opts){ this.url = opts.url||'https://coreenginedb.meoasis2014.workers.dev/json/db.json'; this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
+      constructor(opts){ this.url = opts.url||atob('aHR0cHM6Ly9jb3JlZW5naW5lZGIubWVvYXNpczIwMTQud29ya2Vycy5kZXYvanNvbi9kYi5qc29u'); this.method = opts.method||'PUT'; this.headers = opts.headers||{} }
       async read(){ 
         const ah = (function(){ const base = Object.assign({}, (config&&config.http&&config.http.headers)||{}, this.headers); return base }).call(this)
         const readUrl = (config && config.snapshotUrl) ? config.snapshotUrl : this.url
@@ -980,7 +981,7 @@
     function randomToken(n=32){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('') }
     async function createApiKey(){ try{ const head = await fetch(WORKER_CONFIG_URL,{method:'HEAD'}); const et = head.headers.get('etag')||''; const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); const j = r.ok? await r.json() : {}; if(!j.apiKeys) j.apiKeys=[]; const tok = randomToken(32); j.apiKeys.push(tok); const res = await fetch(WORKER_CONFIG_URL,{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(j,null,2) }); if(!res.ok){ alert('Failed to save config'); return } loadApiKeys(); alert('API Key created'); }catch(_){ alert('Error creating API key') } }
 
-    const WORKER_CONFIG_URL = 'https://coreenginedb.meoasis2014.workers.dev/json/config.json'
+    
     async function pbkdf2Hex(password, salt, iterations, length){ const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']); const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: new TextEncoder().encode(salt), iterations }, key, (length||32)*8); return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('') }
     async function setSuperadmin(){ try{ const head = await fetch(WORKER_CONFIG_URL,{ method:'HEAD' }); const et = head.headers.get('etag')||''; const r = await fetch(WORKER_CONFIG_URL,{ cache:'no-store' }); let cfg = r.ok? await r.json() : {}; if(!cfg.auth) cfg.auth = { enabled: true, salt: 'coreenginedb', users: [] }; if(!Array.isArray(cfg.auth.users)) cfg.auth.users = []; cfg.auth.users = cfg.auth.users.filter(u => String(u.username||'')!=='kwlasing_superadmin'); const salt = 'coreenginedb'; const iterations = 100000; const pw = window.prompt('Enter new superadmin password')||''; if(!pw.trim()){ alert('Password required'); return } const hash = await pbkdf2Hex(pw, salt, iterations, 32); cfg.auth.users.push({ username: 'kwlasing_superadmin', iterations, salt, hash }); const res = await fetch(WORKER_CONFIG_URL,{ method:'PUT', headers: Object.assign({'Content-Type':'application/json'}, et? {'If-Match': et}: {}), body: JSON.stringify(cfg,null,2) }); if(!res.ok){ alert('Failed to set superadmin'); return } alert('Superadmin updated') }catch(_){ alert('Error setting superadmin') } }
     (function(){ var btn = document.getElementById('set-superadmin'); if(btn) btn.addEventListener('click', setSuperadmin) })()
